@@ -11,12 +11,25 @@ import ChargingSession from '@/components/charge-one/ChargingSession';
 import { Toaster } from '@/components/ui/toaster';
 import { useToast } from '@/hooks/use-toast';
 import RechargeDialog from '@/components/charge-one/RechargeDialog';
+import { useAuth } from '@/hooks/useAuth';
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function Home() {
   const [selectedStation, setSelectedStation] = useState<Station | null>(null);
   const [walletBalance, setWalletBalance] = useState(0);
   const [isRechargeOpen, setIsRechargeOpen] = useState(false);
   const { toast } = useToast();
+  const { user, loading } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push('/login');
+    }
+  }, [user, loading, router]);
+
 
   const handleSelectStation = (station: Station) => {
     if (walletBalance <= 0) {
@@ -55,6 +68,26 @@ export default function Home() {
       title: "Recharge Successful",
       description: `₹${amount.toFixed(2)} has been added to your wallet.`,
     });
+  }
+  
+  if (loading || !user) {
+    return (
+        <div className="min-h-screen bg-background p-4 sm:p-6 lg:p-8">
+             <Header />
+            <main className="p-4 sm:p-6 lg:p-8">
+                <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 max-w-7xl mx-auto">
+                    <div className="lg:col-span-2 flex flex-col gap-8">
+                        <Skeleton className="h-48 w-full" />
+                        <Skeleton className="h-40 w-full" />
+                        <Skeleton className="h-[400px] w-full" />
+                    </div>
+                    <div className="lg:col-span-3">
+                         <Skeleton className="h-[600px] w-full" />
+                    </div>
+                </div>
+            </main>
+        </div>
+    );
   }
 
   return (
