@@ -5,7 +5,7 @@ import type { Station, Vehicle } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { Bolt, Timer, BatteryCharging, Power, CheckCircle, Zap, X } from 'lucide-react';
+import { Bolt, Timer, BatteryCharging, Power, CheckCircle, Zap, X, Undo2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface ChargingSessionProps {
@@ -56,7 +56,14 @@ export default function ChargingSession({ station, vehicle, onEndSession, onClea
     setSessionFinished(true);
     toast({
         title: "Charging Stopped",
-        description: `Your wallet has been charged $${cost.toFixed(2)}.`,
+        description: `Your wallet has been charged ₹${cost.toFixed(2)}.`,
+    });
+  };
+
+  const handleRequestRefund = () => {
+    toast({
+        title: "Refund Requested",
+        description: `Your request for a refund of ₹${cost.toFixed(2)} has been submitted for review.`,
     });
   };
   
@@ -98,7 +105,7 @@ export default function ChargingSession({ station, vehicle, onEndSession, onClea
             <CardContent className="space-y-4">
                 <div className="flex justify-between items-center p-3 bg-muted rounded-lg">
                     <span className="font-medium">Total Cost</span>
-                    <span className="text-2xl font-bold text-primary">${cost.toFixed(2)}</span>
+                    <span className="text-2xl font-bold text-primary">₹{cost.toFixed(2)}</span>
                 </div>
                 <div className="grid grid-cols-2 gap-4 text-sm">
                     <div className="space-y-1"><p className="text-muted-foreground">Station</p><p className="font-medium">{station.name}</p></div>
@@ -107,8 +114,12 @@ export default function ChargingSession({ station, vehicle, onEndSession, onClea
                     <div className="space-y-1"><p className="text-muted-foreground">Final Charge</p><p className="font-medium">{Math.min(100, chargePercentage).toFixed(0)}%</p></div>
                 </div>
             </CardContent>
-            <CardFooter>
-                <Button onClick={handleClose} className="w-full">Close & Return</Button>
+            <CardFooter className="flex-col sm:flex-row gap-2">
+                <Button onClick={handleClose} className="w-full">Close</Button>
+                <Button onClick={handleRequestRefund} className="w-full" variant="outline">
+                    <Undo2 className="mr-2 h-4 w-4" />
+                    Request Refund
+                </Button>
             </CardFooter>
         </Card>
     );
@@ -145,7 +156,7 @@ export default function ChargingSession({ station, vehicle, onEndSession, onClea
             </div>
             <div>
                 <Power className="h-6 w-6 mx-auto text-muted-foreground" />
-                <p className="mt-1 font-bold text-lg">${cost.toFixed(2)}</p>
+                <p className="mt-1 font-bold text-lg">₹{cost.toFixed(2)}</p>
                 <p className="text-xs text-muted-foreground">Est. Cost</p>
             </div>
         </div>
