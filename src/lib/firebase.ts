@@ -10,6 +10,11 @@ const firebaseConfig: FirebaseOptions = {
   appId: "1:669583586032:web:c0c73391c7eb691c7ec835"
 };
 
-const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
+let app;
+try {
+  app = getApp();
+} catch (e) {
+  app = initializeApp(firebaseConfig);
+}
 
 export const auth = getAuth(app);
