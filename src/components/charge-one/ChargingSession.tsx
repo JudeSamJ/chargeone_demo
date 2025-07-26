@@ -1,0 +1,166 @@
+"use client";
+
+import { useState, useEffect } from 'react';
+import type { Station, Vehicle } from '@/lib/types';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Progress } from '@/components/ui/progress';
+import { Bolt, Timer, BatteryCharging, Power, CheckCircle, Zap, X } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+
+interface ChargingSessionProps {
+  station: Station | null;
+  vehicle: Vehicle;
+  onEndSession: (cost: number) => void;
+  onClearSelection: () => void;
+}
+
+export default function ChargingSession({ station, vehicle, onEndSession, onClearSelection }: ChargingSessionProps) {
+  const [isCharging, setIsCharging] = useState(false);
+  const [sessionFinished, setSessionFinished] = useState(false);
+  const [elapsedTime, setElapsedTime] = useState(0);
+  const [energyAdded, setEnergyAdded] = useState(0);
+  const { toast } = useToast();
+
+  const cost = station ? energyAdded * station.pricePerKwh : 0;
+  const chargePercentage = vehicle.currentCharge + (energyAdded / vehicle.batteryCapacity) * 100;
+  
+  useEffect(() => {
+    // Reset state when station changes
+    setIsCharging(false);
+    setSessionFinished(false);
+    setElapsedTime(0);
+    setEnergyAdded(0);
+  }, [station]);
+
+  useEffect(() => {
+    let interval: NodeJS.Timeout | undefined;
+    if (isCharging && station) {
+      interval = setInterval(() => {
+        setElapsedTime((prev) => prev + 1);
+        setEnergyAdded((prev) => prev + (station.power / 3600)); // kW to kWh per second
+      }, 1000);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [isCharging, station]);
+  
+  const handleStart = () => {
+    setIsCharging(true);
+    setSessionFinished(false);
+  };
+  
+  const handleStop = () => {
+    setIsCharging(false);
+    setSessionFinished(true);
+    toast({
+        title: "Charging Stopped",
+        description: `Your wallet has been charged $${cost.toFixed(2)}.`,
+    });
+  };
+  
+  const handleClose = () => {
+    onEndSession(cost);
+  };
+  
+  const formatTime = (seconds: number) => {
+    const h = Math.floor(seconds / 3600).toString().padStart(2, '0');
+    const m = Math.floor((seconds % 3600) / 60).toString().padStart(2, '0');
+    const s = Math.floor(seconds % 60).toString().padStart(2, '0');
+    return `${h}:${m}:${s}`;
+  };
+
+  if (!station) {
+    return (
+      <Card className="h-full flex flex-col items-center justify-center min-h-[400px]">
+        <CardContent className="text-center">
+          <Zap className="h-12 w-12 mx-auto text-muted-foreground" />
+          <h3 className="mt-4 text-lg font-medium">No Station Selected</h3>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Please select an available charging station to begin.
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (sessionFinished) {
+    return (
+        <Card className="h-full flex flex-col justify-between">
+            <CardHeader>
+                <div className="flex justify-between items-center">
+                    <CardTitle>Session Summary</CardTitle>
+                    <CheckCircle className="h-8 w-8 text-chart-2" />
+                </div>
+                <CardDescription>Your vehicle charging is complete.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+                <div className="flex justify-between items-center p-3 bg-muted rounded-lg">
+                    <span className="font-medium">Total Cost</span>
+                    <span className="text-2xl font-bold text-primary">${cost.toFixed(2)}</span>
+                </div>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div className="space-y-1"><p className="text-muted-foreground">Station</p><p className="font-medium">{station.name}</p></div>
+                    <div className="space-y-1"><p className="text-muted-foreground">Time Charged</p><p className="font-medium">{formatTime(elapsedTime)}</p></div>
+                    <div className="space-y-1"><p className="text-muted-foreground">Energy Added</p><p className="font-medium">{energyAdded.toFixed(2)} kWh</p></div>
+                    <div className="space-y-1"><p className="text-muted-foreground">Final Charge</p><p className="font-medium">{Math.min(100, chargePercentage).toFixed(0)}%</p></div>
+                </div>
+            </CardContent>
+            <CardFooter>
+                <Button onClick={handleClose} className="w-full">Close & Return</Button>
+            </CardFooter>
+        </Card>
+    );
+  }
+
+  return (
+    <Card className="h-full flex flex-col justify-between">
+      <CardHeader>
+        <div className="flex justify-between items-start">
+            <div>
+                <CardTitle>{station.name}</CardTitle>
+                <CardDescription>{station.location}</CardDescription>
+            </div>
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onClearSelection}>
+                <X className="h-4 w-4" />
+                <span className="sr-only">Close</span>
+            </Button>
+        </div>
+      </CardHeader>
+      <CardContent className="flex flex-col items-center justify-center flex-grow">
+        <Bolt className={`h-16 w-16 text-primary ${isCharging ? 'animate-pulse' : ''}`} />
+        <p className="text-4xl font-bold mt-4 font-headline">{Math.min(100, chargePercentage).toFixed(0)}%</p>
+        <Progress value={Math.min(100, chargePercentage)} className="w-full max-w-xs mt-4" />
+        <div className="grid grid-cols-3 gap-4 mt-8 w-full max-w-md text-center">
+            <div>
+                <Timer className="h-6 w-6 mx-auto text-muted-foreground" />
+                <p className="mt-1 font-bold text-lg">{formatTime(elapsedTime)}</p>
+                <p className="text-xs text-muted-foreground">Time</p>
+            </div>
+            <div>
+                <BatteryCharging className="h-6 w-6 mx-auto text-muted-foreground" />
+                <p className="mt-1 font-bold text-lg">{energyAdded.toFixed(2)} kWh</p>
+                <p className="text-xs text-muted-foreground">Energy</p>
+            </div>
+            <div>
+                <Power className="h-6 w-6 mx-auto text-muted-foreground" />
+                <p className="mt-1 font-bold text-lg">${cost.toFixed(2)}</p>
+                <p className="text-xs text-muted-foreground">Est. Cost</p>
+            </div>
+        </div>
+      </CardContent>
+      <CardFooter>
+        {isCharging ? (
+          <Button onClick={handleStop} variant="destructive" className="w-full">
+            <Power className="mr-2 h-4 w-4" /> Stop Charging
+          </Button>
+        ) : (
+          <Button onClick={handleStart} className="w-full bg-accent text-accent-foreground hover:bg-accent/90">
+            <BatteryCharging className="mr-2 h-4 w-4" /> Start Charging
+          </Button>
+        )}
+      </CardFooter>
+    </Card>
+  );
+}
