@@ -4,9 +4,18 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { signInWithGoogle, signOutWithGoogle } from "@/lib/auth";
 import { useAuth } from "@/hooks/useAuth";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 
 export default function LoginPage() {
-    const { user } = useAuth();
+    const { user, loading } = useAuth();
+    const router = useRouter();
+
+    useEffect(() => {
+        if (user) {
+            router.push('/');
+        }
+    }, [user, router]);
 
     const handleLogin = async () => {
         try {
@@ -24,25 +33,23 @@ export default function LoginPage() {
         }
     };
 
+    if(loading) return <p>Loading...</p>;
+
+    if(user) return null;
+
     return (
         <div className="flex items-center justify-center min-h-screen bg-background">
             <Card className="w-full max-w-sm">
                 <CardHeader className="text-center">
                     <CardTitle className="text-2xl">Welcome to ChargeOne</CardTitle>
                     <CardDescription>
-                        {user ? `You are logged in as ${user.displayName}` : 'Please sign in to continue'}
+                        Please sign in to continue
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
-                    {user ? (
-                        <Button onClick={handleLogout} className="w-full" variant="destructive">
-                            Sign Out
-                        </Button>
-                    ) : (
-                        <Button onClick={handleLogin} className="w-full">
-                            Sign in with Google
-                        </Button>
-                    )}
+                    <Button onClick={handleLogin} className="w-full">
+                        Sign in with Google
+                    </Button>
                 </CardContent>
             </Card>
         </div>
