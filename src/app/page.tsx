@@ -10,8 +10,6 @@ import MapView from '@/components/charge-one/MapView';
 import ChargingSession from '@/components/charge-one/ChargingSession';
 import { Toaster } from '@/components/ui/toaster';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/hooks/useAuth';
-import LoginPage from './login/page';
 import RechargeDialog from '@/components/charge-one/RechargeDialog';
 
 export default function Home() {
@@ -19,8 +17,6 @@ export default function Home() {
   const [walletBalance, setWalletBalance] = useState(0);
   const [isRechargeOpen, setIsRechargeOpen] = useState(false);
   const { toast } = useToast();
-  const { user, loading } = useAuth();
-
 
   const handleSelectStation = (station: Station) => {
     if (walletBalance <= 0) {
@@ -59,18 +55,6 @@ export default function Home() {
       title: "Recharge Successful",
       description: `₹${amount.toFixed(2)} has been added to your wallet.`,
     });
-  }
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <p>Loading...</p>
-      </div>
-    );
-  }
-
-  if (!user) {
-    return <LoginPage />;
   }
 
   return (

@@ -14,9 +14,6 @@ export function useAuth() {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setUser(user);
       setLoading(false);
-      if (!user) {
-        router.push('/login');
-      }
     });
 
     return () => unsubscribe();
