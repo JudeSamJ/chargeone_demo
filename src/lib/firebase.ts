@@ -3,13 +3,15 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut } from "firebase/auth";
 
+// THIS IS A PLACEHOLDER CONFIGURATION
+// Replace with your actual Firebase project configuration
 const firebaseConfig = {
-  apiKey: "AIzaSyCTjAWqGUnxDV4YeUxYHbogfRvs5cZTTIg",
-  authDomain: "chargeone.firebaseapp.com",
-  projectId: "chargeone",
-  storageBucket: "chargeone.appspot.com",
-  messagingSenderId: "669583586032",
-  appId: "1:669583586032:web:c0c73391c7eb691c7ec835"
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_AUTH_DOMAIN",
+  projectId: "YOUR_PROJECT_ID",
+  storageBucket: "YOUR_STORAGE_BUCKET",
+  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+  appId: "YOUR_APP_ID"
 };
 
 // Initialize Firebase
@@ -24,6 +26,5 @@ export const signInWithGoogle = () => {
 export const signOutWithGoogle = () => {
   return signOut(auth);
 };
-
 
 export { app, auth };
