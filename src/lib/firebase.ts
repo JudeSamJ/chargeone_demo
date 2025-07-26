@@ -1,21 +1,26 @@
 "use client";
 
-import { initializeApp, getApps, getApp } from "firebase/app";
+import { initializeApp, getApps, getApp, FirebaseApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut } from "firebase/auth";
 
-// THIS IS A PLACEHOLDER CONFIGURATION
-// Replace with your actual Firebase project configuration
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_AUTH_DOMAIN",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_STORAGE_BUCKET",
-  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-  appId: "YOUR_APP_ID"
+  "projectId": "chargeone",
+  "appId": "1:669583586032:web:c0c73391c7eb691c7ec835",
+  "storageBucket": "chargeone.firebasestorage.app",
+  "apiKey": "AIzaSyCTjAWqGUnxDV4YeUxYHbogfRvs5cZTTIg",
+  "authDomain": "chargeone.firebaseapp.com",
+  "measurementId": "",
+  "messagingSenderId": "669583586032"
 };
 
 // Initialize Firebase
-const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
+let app: FirebaseApp;
+if (!getApps().length) {
+  app = initializeApp(firebaseConfig);
+} else {
+  app = getApp();
+}
+
 const auth = getAuth(app);
 const provider = new GoogleAuthProvider();
 
