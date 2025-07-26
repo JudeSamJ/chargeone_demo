@@ -1,20 +1,35 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { Station } from '@/lib/types';
 import { availableStations, userVehicle } from '@/lib/mock-data';
 import Header from '@/components/charge-one/Header';
 import WalletCard from '@/components/charge-one/WalletCard';
 import VehicleStatusCard from '@/components/charge-one/VehicleStatusCard';
-import ChargingStationList from '@/components/charge-one/ChargingStationList';
+import MapView from '@/components/charge-one/MapView';
 import ChargingSession from '@/components/charge-one/ChargingSession';
 import { Toaster } from '@/components/ui/toaster';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
+import LoginPage from './login/page';
+import { onAuthStateChanged, User } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
 
 export default function Home() {
   const [selectedStation, setSelectedStation] = useState<Station | null>(null);
   const [walletBalance, setWalletBalance] = useState(75.50);
   const { toast } = useToast();
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+      setLoading(false);
+    });
+    return () => unsubscribe();
+  }, []);
+
 
   const handleSelectStation = (station: Station) => {
     if (station.isAvailable) {
@@ -37,6 +52,14 @@ export default function Home() {
     setSelectedStation(null);
   }
 
+  if (loading) {
+    return <div>Loading...</div>;
+  }
+
+  if (!user) {
+    return <LoginPage />;
+  }
+
   return (
     <div className="min-h-screen bg-background text-foreground">
       <Header />
@@ -45,7 +68,7 @@ export default function Home() {
           <div className="lg:col-span-2 flex flex-col gap-8">
             <WalletCard balance={walletBalance} />
             <VehicleStatusCard vehicle={userVehicle} />
-            <ChargingStationList 
+            <MapView 
               stations={availableStations}
               onSelectStation={handleSelectStation}
               selectedStationId={selectedStation?.id}

@@ -17,6 +17,8 @@ export const availableStations: Station[] = [
     pricePerKwh: 0.45,
     connectors: ['CCS', 'Type 2'],
     isAvailable: true,
+    lat: 34.052235,
+    lng: -118.243683,
   },
   {
     id: 2,
@@ -27,6 +29,8 @@ export const availableStations: Station[] = [
     pricePerKwh: 0.30,
     connectors: ['CHAdeMO', 'Type 2'],
     isAvailable: true,
+    lat: 34.056,
+    lng: -118.25,
   },
   {
     id: 3,
@@ -37,6 +41,8 @@ export const availableStations: Station[] = [
     pricePerKwh: 0.55,
     connectors: ['CCS'],
     isAvailable: false,
+    lat: 34.1,
+    lng: -118.3,
   },
   {
     id: 4,
@@ -47,5 +53,7 @@ export const availableStations: Station[] = [
     pricePerKwh: 0.25,
     connectors: ['Type 2'],
     isAvailable: true,
+    lat: 34.04,
+    lng: -118.2,
   },
 ];
