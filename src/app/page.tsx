@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import type { Station } from '@/lib/types';
 import { availableStations, userVehicle } from '@/lib/mock-data';
 import Header from '@/components/charge-one/Header';
@@ -12,23 +12,25 @@ import { Toaster } from '@/components/ui/toaster';
 import { useToast } from '@/hooks/use-toast';
 import RechargeDialog from '@/components/charge-one/RechargeDialog';
 import { useAuth } from '@/hooks/useAuth';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 
-export default function Home() {
+function HomePageContent() {
   const [selectedStation, setSelectedStation] = useState<Station | null>(null);
   const [walletBalance, setWalletBalance] = useState(0);
   const [isRechargeOpen, setIsRechargeOpen] = useState(false);
   const { toast } = useToast();
   const { user, loading } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const isGuest = searchParams.get('guest') === 'true';
 
   useEffect(() => {
-    if (!loading && !user) {
+    if (!loading && !user && !isGuest) {
       router.push('/login');
     }
-  }, [user, loading, router]);
+  }, [user, loading, router, isGuest]);
 
 
   const handleSelectStation = (station: Station) => {
@@ -70,7 +72,7 @@ export default function Home() {
     });
   }
   
-  if (loading || !user) {
+  if (loading || (!user && !isGuest)) {
     return (
         <div className="min-h-screen bg-background p-4 sm:p-6 lg:p-8">
              <Header />
@@ -122,4 +124,12 @@ export default function Home() {
       <Toaster />
     </div>
   );
+}
+
+export default function Home() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <HomePageContent />
+    </Suspense>
+  )
 }
