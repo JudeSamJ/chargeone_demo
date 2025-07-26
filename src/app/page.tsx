@@ -19,7 +19,7 @@ import { rechargeWallet } from '@/ai/flows/rechargeWallet';
 
 function HomePageContent() {
   const [selectedStation, setSelectedStation] = useState<Station | null>(null);
-  const [walletBalance, setWalletBalance] = useState(2000);
+  const [walletBalance, setWalletBalance] = useState(0);
   const [isRechargeOpen, setIsRechargeOpen] = useState(false);
   const { toast } = useToast();
   const { user, loading } = useAuth();
