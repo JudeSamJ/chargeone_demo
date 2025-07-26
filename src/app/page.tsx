@@ -15,10 +15,11 @@ import { useAuth } from '@/hooks/useAuth';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { rechargeWallet } from '@/ai/flows/rechargeWallet';
 
 function HomePageContent() {
   const [selectedStation, setSelectedStation] = useState<Station | null>(null);
-  const [walletBalance, setWalletBalance] = useState(0);
+  const [walletBalance, setWalletBalance] = useState(2000);
   const [isRechargeOpen, setIsRechargeOpen] = useState(false);
   const { toast } = useToast();
   const { user, loading } = useAuth();
@@ -63,13 +64,30 @@ function HomePageContent() {
     setSelectedStation(null);
   }
 
-  const handleRecharge = (amount: number) => {
-    setWalletBalance((prev) => prev + amount);
-    setIsRechargeOpen(false);
-    toast({
-      title: "Recharge Successful",
-      description: `₹${amount.toFixed(2)} has been added to your wallet.`,
-    });
+  const handleRecharge = async (amount: number) => {
+    try {
+      const result = await rechargeWallet({ amount });
+      if (result.success) {
+        setWalletBalance((prev) => prev + amount);
+        setIsRechargeOpen(false);
+        toast({
+          title: "Recharge Successful",
+          description: result.message,
+        });
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Recharge Failed",
+          description: result.message,
+        });
+      }
+    } catch (error) {
+       toast({
+          variant: "destructive",
+          title: "Recharge Error",
+          description: "An unexpected error occurred.",
+        });
+    }
   }
   
   if (loading || (!user && !isGuest)) {
