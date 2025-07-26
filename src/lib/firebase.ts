@@ -7,7 +7,7 @@ const firebaseConfig = {
   apiKey: "AIzaSyCTjAWqGUnxDV4YeUxYHbogfRvs5cZTTIg",
   authDomain: "chargeone.firebaseapp.com",
   projectId: "chargeone",
-  storageBucket: "chargeone.firebasestorage.app",
+  storageBucket: "chargeone.appspot.com",
   messagingSenderId: "669583586032",
   appId: "1:669583586032:web:c0c73391c7eb691c7ec835"
 };
