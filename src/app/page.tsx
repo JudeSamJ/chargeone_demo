@@ -3,7 +3,7 @@
 
 import { useState, Suspense, useEffect } from 'react';
 import type { Station, Vehicle } from '@/lib/types';
-import { userVehicle } from '@/lib/mock-data';
+import { defaultVehicle, vehicles } from '@/lib/mock-data';
 import Header from '@/components/charge-one/Header';
 import WalletCard from '@/components/charge-one/WalletCard';
 import VehicleStatusCard from '@/components/charge-one/VehicleStatusCard';
@@ -31,6 +31,7 @@ function HomePageContent() {
   const [chargingStops, setChargingStops] = useState<Station[]>([]);
   const [locationError, setLocationError] = useState<string | null>(null);
   const [isLocationReady, setIsLocationReady] = useState(false);
+  const [userVehicle, setUserVehicle] = useState<Vehicle | null>(null);
 
 
   const { toast } = useToast();
@@ -42,6 +43,18 @@ function HomePageContent() {
   useEffect(() => {
     if (!loading && !user && !isGuest) {
       router.push('/login');
+    } else if (!loading && (user || isGuest)) {
+      const storedVehicle = localStorage.getItem('userVehicle');
+      if (storedVehicle) {
+        setUserVehicle(JSON.parse(storedVehicle));
+      } else if(isGuest) {
+        // For guests, use a default vehicle so they can use the app
+        setUserVehicle(defaultVehicle);
+      }
+      else {
+        // If logged in but no vehicle, go to selection
+        router.push('/vehicle-details');
+      }
     }
   }, [user, loading, router, isGuest]);
 
@@ -154,6 +167,12 @@ function HomePageContent() {
         toast({ variant: "destructive", title: "Destination Required", description: "Please enter a destination." });
         return;
     }
+
+     if (!userVehicle) {
+        toast({ variant: "destructive", title: "Vehicle Required", description: "Please select your vehicle first." });
+        router.push('/vehicle-details');
+        return;
+    }
     
     setIsPlanningRoute(true);
     setDirections(null);
@@ -171,7 +190,12 @@ function HomePageContent() {
         } else {
             setDirections(result.directions);
             if (result.chargingStops && result.chargingStops.length > 0) {
-                setStations(prevStations => [...prevStations, ...result.chargingStops!]);
+                // Do not clear existing stations, just add the new ones
+                setStations(prevStations => {
+                    const existingStationIds = new Set(prevStations.map(s => s.id));
+                    const newStations = result.chargingStops!.filter(s => !existingStationIds.has(s.id));
+                    return [...prevStations, ...newStations];
+                });
                 setChargingStops(result.chargingStops);
             }
             if (result.errorMessage) {
@@ -190,7 +214,7 @@ function HomePageContent() {
     }
   }
   
-  if (loading || (!user && !isGuest) || !currentLocation) {
+  if (loading || (!user && !isGuest) || !currentLocation || !userVehicle) {
     return (
         <div className="min-h-screen bg-background p-4 sm:p-6 lg:p-8">
              <Header />
@@ -230,6 +254,7 @@ function HomePageContent() {
           </div>
           <div className="lg:col-span-3">
             <MapView 
+              stations={stations}
               onStationsLoaded={setStations}
               onSelectStation={handleSelectStation}
               selectedStationId={selectedStation?.id}

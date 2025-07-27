@@ -8,6 +8,7 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import { findStations } from '@/ai/flows/findStations';
 
 interface MapViewProps {
+    stations: Station[];
     onStationsLoaded: (stations: Station[]) => void;
     onSelectStation: (station: Station) => void;
     selectedStationId?: string | null;
@@ -26,6 +27,7 @@ const containerStyle = {
 const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "";
 
 export default function MapView({ 
+    stations,
     onStationsLoaded, 
     onSelectStation, 
     selectedStationId,
@@ -38,7 +40,6 @@ export default function MapView({
     libraries: ['places', 'routes'],
   });
   
-  const [stations, setStations] = useState<Station[]>([]);
   const [error, setError] = useState<string | null>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -47,7 +48,6 @@ export default function MapView({
       try {
         const fetchedStations = await findStations({ lat: center.lat, lng: center.lng });
         
-        setStations(fetchedStations);
         onStationsLoaded(fetchedStations);
 
         setError(null);
@@ -147,24 +147,23 @@ export default function MapView({
                     zoomControl: true,
                 }}
               >
-                {!directions ? (
-                    stations.map(station => (
-                        <MarkerF
-                            key={station.id}
-                            position={{ lat: station.lat, lng: station.lng }}
-                            onClick={() => onSelectStation(station)}
-                            title={station.name}
-                            icon={{
-                                path: typeof window !== 'undefined' ? window.google.maps.SymbolPath.CIRCLE : '',
-                                scale: station.id === selectedStationId ? 10 : 7,
-                                fillColor: station.isAvailable ? "#10B981" : "#F59E0B",
-                                fillOpacity: 1,
-                                strokeWeight: 2,
-                                strokeColor: "#ffffff"
-                            }}
-                        />
-                    ))
-                ) : (
+                {stations.map(station => (
+                    <MarkerF
+                        key={station.id}
+                        position={{ lat: station.lat, lng: station.lng }}
+                        onClick={() => onSelectStation(station)}
+                        title={station.name}
+                        icon={{
+                            path: typeof window !== 'undefined' ? window.google.maps.SymbolPath.CIRCLE : '',
+                            scale: station.id === selectedStationId ? 10 : 7,
+                            fillColor: station.isAvailable ? "#10B981" : "#F59E0B",
+                            fillOpacity: 1,
+                            strokeWeight: 2,
+                            strokeColor: "#ffffff"
+                        }}
+                    />
+                ))}
+                {directions && routePath && (
                     <>
                         <PolylineF
                         path={routePath}

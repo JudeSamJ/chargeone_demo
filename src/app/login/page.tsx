@@ -14,14 +14,14 @@ export default function LoginPage() {
 
     useEffect(() => {
         if (!loading && user) {
-            router.push('/');
+            router.push('/vehicle-details');
         }
     }, [user, loading, router]);
 
     const handleLogin = async () => {
         try {
             await signInWithGoogle();
-            router.push('/');
+            router.push('/vehicle-details');
         } catch (error) {
             console.error("Login failed", error);
         }
