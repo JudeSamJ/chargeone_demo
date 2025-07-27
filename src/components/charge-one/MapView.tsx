@@ -1,4 +1,3 @@
-
 "use client";
 
 import { GoogleMap, useJsApiLoader, MarkerF, DirectionsRenderer } from '@react-google-maps/api';
@@ -27,15 +26,15 @@ interface MapViewProps {
   stations: Station[];
   route: google.maps.DirectionsResult | null;
   onLocationUpdate: (location: google.maps.LatLngLiteral) => void;
+  currentLocation: google.maps.LatLngLiteral | null;
 }
 
-export default function MapView({ onStationsFound, stations, onStationClick, route, onLocationUpdate }: MapViewProps) {
+export default function MapView({ onStationsFound, stations, onStationClick, route, onLocationUpdate, currentLocation }: MapViewProps) {
     const { isLoaded, loadError } = useJsApiLoader({
         googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "",
         libraries: ['places'],
     });
     
-    const [currentLocation, setCurrentLocation] = useState<google.maps.LatLngLiteral | null>(null);
     const [center, setCenter] = useState(defaultCenter);
     const [destinationLocation, setDestinationLocation] = useState<google.maps.LatLngLiteral | null>(null);
     const { toast } = useToast();
@@ -43,8 +42,19 @@ export default function MapView({ onStationsFound, stations, onStationClick, rou
     const { theme } = useTheme();
     const stationsFetchedRef = useRef(false);
 
+    const [directionsRenderer, setDirectionsRenderer] = useState<google.maps.DirectionsRenderer | null>(null);
+
+
     const onMapLoad = useCallback((map: google.maps.Map) => {
         mapRef.current = map;
+        const renderer = new google.maps.DirectionsRenderer({
+            polylineOptions: {
+                strokeColor: '#4285F4',
+                strokeWeight: 6,
+            }
+        });
+        renderer.setMap(map);
+        setDirectionsRenderer(renderer);
     }, []);
 
     useEffect(() => {
@@ -59,7 +69,6 @@ export default function MapView({ onStationsFound, stations, onStationClick, rou
                         lat: position.coords.latitude,
                         lng: position.coords.longitude,
                     };
-                    setCurrentLocation(currentPosition);
                     onLocationUpdate(currentPosition);
                     
                     if (!route) {
@@ -119,7 +128,8 @@ export default function MapView({ onStationsFound, stations, onStationClick, rou
 
 
     useEffect(() => {
-        if (route && mapRef.current && isLoaded) {
+        if (route && mapRef.current && isLoaded && directionsRenderer) {
+            directionsRenderer.setDirections(route);
             const bounds = new google.maps.LatLngBounds();
             const routeLeg = route.routes[0]?.legs[0];
 
@@ -147,8 +157,11 @@ export default function MapView({ onStationsFound, stations, onStationClick, rou
             }
         } else {
             setDestinationLocation(null);
+            if (directionsRenderer) {
+                directionsRenderer.setDirections(null);
+            }
         }
-    }, [route, isLoaded]);
+    }, [route, isLoaded, directionsRenderer]);
 
     const getStationMarkerIcon = (status: Station['status']) => {
         let color = '#808080'; // Grey for unavailable
@@ -226,18 +239,7 @@ export default function MapView({ onStationsFound, stations, onStationClick, rou
                         }}
                     />
                 )}
-                {route && (
-                    <DirectionsRenderer
-                        directions={route}
-                        options={{
-                            suppressMarkers: true,
-                            polylineOptions: {
-                                strokeColor: '#4285F4',
-                                strokeWeight: 6,
-                            }
-                        }}
-                    />
-                )}
+                
               </>
             )}
         </GoogleMap>
