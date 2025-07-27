@@ -25,6 +25,9 @@ export default function RechargeDialog({ isOpen, onOpenChange, onRecharge }: Rec
   const handleRechargeClick = () => {
     const rechargeAmount = parseFloat(amount);
     if (!isNaN(rechargeAmount) && rechargeAmount > 0) {
+      // In a real integration, you would use the public Razorpay key ID here
+      // to initialize the checkout process on the client-side.
+      console.log("Using Razorpay Key ID:", process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID);
       onRecharge(rechargeAmount);
       setAmount('');
     }
@@ -38,7 +41,7 @@ export default function RechargeDialog({ isOpen, onOpenChange, onRecharge }: Rec
         <DialogHeader>
           <DialogTitle>Recharge Wallet</DialogTitle>
           <DialogDescription>
-            Add funds to your wallet using our secure Google Pay integration.
+            Add funds to your wallet. This is a simulated payment.
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
@@ -62,14 +65,14 @@ export default function RechargeDialog({ isOpen, onOpenChange, onRecharge }: Rec
               className="col-span-3"
             />
           </div>
-          <div className="flex flex-col items-center justify-center p-4 rounded-lg bg-muted">
-              <img src="https://upload.wikimedia.org/wikipedia/commons/f/f2/Google_Pay_Logo.svg" alt="Google Pay" className="h-8 mb-2" />
+           <div className="flex flex-col items-center justify-center p-4 rounded-lg bg-muted">
+              <img src="https://razorpay.com/assets/razorpay-logo.svg" alt="Razorpay" className="h-8 mb-2" />
               <p className="text-sm text-muted-foreground">Simulated Payment</p>
           </div>
         </div>
         <DialogFooter>
           <Button type="submit" onClick={handleRechargeClick} className="w-full">
-            Recharge with Google Pay
+            Recharge with Razorpay
           </Button>
         </DialogFooter>
       </DialogContent>

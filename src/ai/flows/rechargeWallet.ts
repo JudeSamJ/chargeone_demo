@@ -14,14 +14,11 @@ export async function rechargeWallet(input: { amount: number }): Promise<{ succe
   const RechargeWalletInputSchema = z.object({
     amount: z.number().positive("Amount must be positive."),
   });
-  type RechargeWalletInput = z.infer<typeof RechargeWalletInputSchema>;
 
   const RechargeWalletOutputSchema = z.object({
     success: z.boolean(),
     message: z.string(),
   });
-  type RechargeWalletOutput = z.infer<typeof RechargeWalletOutputSchema>;
-
 
   const rechargeWalletFlow = ai.defineFlow(
     {
@@ -30,10 +27,13 @@ export async function rechargeWallet(input: { amount: number }): Promise<{ succe
       outputSchema: RechargeWalletOutputSchema,
     },
     async ({ amount }) => {
-      // In a real application, you would integrate with a payment gateway like Stripe or Google Pay here.
-      // For this example, we'll just simulate a successful transaction.
-      console.log(`Processing recharge of ₹${amount}`);
+      // In a real application, you would use the Razorpay secret key here
+      // to create an order and verify the payment signature on the server.
+      const razorpayKeySecret = process.env.RAZORPAY_KEY_SECRET;
       
+      console.log(`Processing recharge of ₹${amount}`);
+      console.log(`Using Razorpay Secret: ${razorpayKeySecret ? 'Loaded' : 'Not Found'}`);
+
       // Simulate some processing time
       await new Promise(resolve => setTimeout(resolve, 1000));
 
