@@ -159,8 +159,8 @@ export default function MapView({
                             }
                         }}
                     />
-                    <MarkerF 
-                        position={initialCenter} 
+                     <MarkerF 
+                        position={directions.routes[0].legs[0].start_location}
                         title="Your Location"
                         icon={{
                             path: google.maps.SymbolPath.CIRCLE,
@@ -171,13 +171,16 @@ export default function MapView({
                             strokeColor: "white",
                         }}
                     />
+                     <MarkerF 
+                        position={directions.routes[0].legs[directions.routes[0].legs.length - 1].end_location}
+                        title="Destination"
+                    />
                     {chargingStop && (
                         <MarkerF
                             position={{ lat: chargingStop.lat, lng: chargingStop.lng }}
                             title={chargingStop.name}
                             icon={{
-                                url: 'https://maps.google.com/mapfiles/kml/shapes/gas_stations.png',
-                                scaledSize: new google.maps.Size(40, 40)
+                                url: 'http://maps.google.com/mapfiles/ms/icons/green-dot.png'
                             }}
                         />
                     )}
