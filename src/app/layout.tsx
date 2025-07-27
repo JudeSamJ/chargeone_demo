@@ -12,7 +12,7 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const GOOGLE_MAPS_API_KEY = "AIzaSyBMltP754BsiINUjJ90C0HE5YE0As2cTcc";
+  const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
   return (
     <html lang="en">
       <head>
