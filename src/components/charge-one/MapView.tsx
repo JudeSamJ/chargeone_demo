@@ -74,13 +74,19 @@ export default function MapView({ stations, selectedStation, onStationSelect, on
      useEffect(() => {
         if (route && mapRef.current) {
             const bounds = new google.maps.LatLngBounds();
-            route.routes[0].legs.forEach(leg => {
-                leg.steps.forEach(step => {
-                    step.path.forEach(path => {
-                        bounds.extend(path);
+            if (route.routes && route.routes[0] && route.routes[0].legs) {
+              route.routes[0].legs.forEach(leg => {
+                  if (leg.steps) {
+                    leg.steps.forEach(step => {
+                        if (step.path) {
+                          step.path.forEach(path => {
+                              bounds.extend(path);
+                          })
+                        }
                     })
-                })
-            });
+                  }
+              })
+            }
             mapRef.current.fitBounds(bounds);
         }
     }, [route]);
