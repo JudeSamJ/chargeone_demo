@@ -49,9 +49,12 @@ function HomePageContent() {
         setUserVehicle(JSON.parse(storedVehicle));
       } else if(isGuest) {
         // For guests, use a default vehicle so they can use the app
-        setUserVehicle(defaultVehicle);
+        const guestVehicle = { ...defaultVehicle, currentCharge: 80 };
+        setUserVehicle(guestVehicle);
+        // Also save it so it persists if they refresh
+        localStorage.setItem('userVehicle', JSON.stringify(guestVehicle));
       }
-      else {
+      else if (user) {
         // If logged in but no vehicle, go to selection
         router.push('/vehicle-details');
       }
@@ -216,7 +219,7 @@ function HomePageContent() {
   
   if (loading || (!user && !isGuest) || !currentLocation || !userVehicle) {
     return (
-        <div className="min-h-screen bg-background p-4 sm:p-6 lg:p-8">
+        <div className="min-h-screen bg-background">
              <Header />
             <main className="p-4 sm:p-6 lg:p-8">
                 <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 max-w-7xl mx-auto">
@@ -278,7 +281,7 @@ function HomePageContent() {
 
 export default function Home() {
   return (
-    <Suspense fallback={<div>Loading...</div>}>
+    <Suspense fallback={<div className="flex items-center justify-center min-h-screen bg-background"><p>Loading...</p></div>}>
       <HomePageContent />
     </Suspense>
   )

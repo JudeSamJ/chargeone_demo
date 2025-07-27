@@ -14,14 +14,20 @@ export default function LoginPage() {
 
     useEffect(() => {
         if (!loading && user) {
-            router.push('/vehicle-details');
+            // If user is logged in, check if they have a vehicle saved
+            const storedVehicle = localStorage.getItem('userVehicle');
+            if (storedVehicle) {
+                router.push('/');
+            } else {
+                router.push('/vehicle-details');
+            }
         }
     }, [user, loading, router]);
 
     const handleLogin = async () => {
         try {
             await signInWithGoogle();
-            router.push('/vehicle-details');
+            // The useEffect will handle redirection
         } catch (error) {
             console.error("Login failed", error);
         }
@@ -37,7 +43,7 @@ export default function LoginPage() {
 
     return (
         <div className="flex items-center justify-center min-h-screen bg-background">
-            <Card className="w-full max-w-sm">
+            <Card className="w-full max-w-sm mx-4">
                 <CardHeader className="text-center">
                     <CardTitle className="text-2xl">Welcome to ChargeOne</CardTitle>
                     <CardDescription>
@@ -48,12 +54,12 @@ export default function LoginPage() {
                     <Button className="w-full" onClick={handleLogin}>
                         Sign in with Google
                     </Button>
-                    <div className="relative">
+                     <div className="relative">
                         <div className="absolute inset-0 flex items-center">
                             <span className="w-full border-t" />
                         </div>
                         <div className="relative flex justify-center text-xs uppercase">
-                            <span className="bg-background px-2 text-muted-foreground">
+                            <span className="px-2 bg-card text-muted-foreground">
                                 Or
                             </span>
                         </div>
