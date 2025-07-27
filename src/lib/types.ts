@@ -1,3 +1,5 @@
+import { z } from 'genkit';
+
 export interface Vehicle {
   make: string;
   model: string;
@@ -17,3 +19,12 @@ export interface Station {
   lat: number;
   lng: number;
 }
+
+export const FindStationsInputSchema = z.object({
+  latitude: z.number(),
+  longitude: z.number(),
+  radius: z.number().default(10000), // 10km
+});
+export type FindStationsInput = z.infer<typeof FindStationsInputSchema>;
+
+export const FindStationsOutputSchema = z.array(z.custom<Station>());

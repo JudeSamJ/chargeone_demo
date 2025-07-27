@@ -5,18 +5,8 @@
  */
 
 import { ai } from '@/ai/genkit';
-import { z } from 'genkit';
-import { Station } from '@/lib/types';
+import { Station, FindStationsInputSchema, FindStationsOutputSchema, FindStationsInput } from '@/lib/types';
 import { findPlace, getPlaceDetails } from '@/lib/google-maps';
-
-export const FindStationsInputSchema = z.object({
-  latitude: z.number(),
-  longitude: z.number(),
-  radius: z.number().default(10000), // 10km
-});
-export type FindStationsInput = z.infer<typeof FindStationsInputSchema>;
-
-export const FindStationsOutputSchema = z.array(z.custom<Station>());
 
 export async function findStations(input: FindStationsInput): Promise<Station[]> {
   return findStationsFlow(input);
