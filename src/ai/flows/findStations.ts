@@ -30,25 +30,21 @@ const findStationsFlow = ai.defineFlow(
         return [];
     }
 
-    // Directly map and filter valid stations
     const stations: Station[] = places.map((p: any) => ({
       id: p.place_id,
       name: p.name,
-      location: p.vicinity, // Use vicinity for the main location string
+      location: p.vicinity, 
       vicinity: p.vicinity,
-      distance: 0, // This can be calculated on the client if needed
-      power: 50, // Placeholder, not provided by API
-      pricePerKwh: 18.50, // Placeholder
-      connectors: ['CCS'], // Placeholder
-      isAvailable: p.opening_hours?.open_now ?? (p.business_status === 'OPERATIONAL'), // Use ?? for better null/undefined handling
+      distance: 0, 
+      power: 50,
+      pricePerKwh: 18.50,
+      connectors: ['CCS'],
+      isAvailable: p.opening_hours?.open_now ?? (p.business_status === 'OPERATIONAL'),
       lat: p.geometry?.location?.lat,
       lng: p.geometry?.location?.lng,
     })).filter((station: any): station is Station => {
-        // Ensure that any station without a valid lat/lng is filtered out
         if (!station.lat || !station.lng) return false;
         
-        // This safe-guard ensures that any station that doesn't conform to the schema after mapping is filtered out.
-        // This is crucial for preventing bad data from the API from crashing the app.
         return StationSchema.safeParse(station).success;
     });
     

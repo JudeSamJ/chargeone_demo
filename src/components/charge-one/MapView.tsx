@@ -50,7 +50,7 @@ export default function MapView({ onStationsFound, stations, onStationClick, rou
                         lng: position.coords.longitude,
                     };
                     setCurrentLocation(currentPosition);
-                    setCenter(currentPosition); // Pan map to current location
+                    setCenter(currentPosition);
                     map.panTo(currentPosition);
                     map.setZoom(14);
                     findStations({ latitude: currentPosition.lat, longitude: currentPosition.lng, radius: 10000 })
@@ -62,7 +62,6 @@ export default function MapView({ onStationsFound, stations, onStationClick, rou
                 },
                 () => {
                     toast({ title: 'Could not get your location. Showing default.' });
-                    setCurrentLocation(defaultCenter);
                     findStations({ latitude: defaultCenter.lat, longitude: defaultCenter.lng, radius: 10000 })
                        .then(onStationsFound)
                        .catch(err => {
@@ -73,7 +72,6 @@ export default function MapView({ onStationsFound, stations, onStationClick, rou
             );
         } else {
              toast({ title: 'Geolocation not supported. Showing default location.' });
-             setCurrentLocation(defaultCenter);
              findStations({ latitude: defaultCenter.lat, longitude: defaultCenter.lng, radius: 10000 })
                 .then(onStationsFound)
                 .catch(err => {
@@ -88,7 +86,6 @@ export default function MapView({ onStationsFound, stations, onStationClick, rou
             const bounds = new google.maps.LatLngBounds();
             if (route.routes[0]?.bounds) {
                 const routeBounds = route.routes[0].bounds;
-                // The DirectionsResult bounds object is a LatLngBoundsLiteral, not a LatLngBounds object
                 const ne = routeBounds.northeast;
                 const sw = routeBounds.southwest;
                 const newBounds = new google.maps.LatLngBounds(
@@ -122,7 +119,6 @@ export default function MapView({ onStationsFound, stations, onStationClick, rou
         >
             {isLoaded && (
               <>
-                {/* Marker for current location */}
                 {currentLocation && (
                   <MarkerF
                       position={currentLocation}
@@ -138,7 +134,6 @@ export default function MapView({ onStationsFound, stations, onStationClick, rou
                   />
                 )}
                 
-                {/* Markers for EV stations */}
                 {stations.map(station => (
                     <MarkerF
                         key={station.id}
@@ -152,7 +147,6 @@ export default function MapView({ onStationsFound, stations, onStationClick, rou
                     />
                 ))}
 
-                {/* Renderer for the planned route */}
                 {route && (
                   <DirectionsRenderer
                       directions={route}
