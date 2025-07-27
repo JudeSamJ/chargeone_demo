@@ -35,7 +35,7 @@ export default function MapView({ onStationsFound, stations, onStationClick, rou
     });
 
     const [center, setCenter] = useState(defaultCenter);
-    const [currentLocation, setCurrentLocation] = useState(defaultCenter);
+    const [currentLocation, setCurrentLocation] = useState<google.maps.LatLngLiteral | null>(null);
     const { toast } = useToast();
     const mapRef = useRef<google.maps.Map | null>(null);
     const { theme } = useTheme();
@@ -49,8 +49,8 @@ export default function MapView({ onStationsFound, stations, onStationClick, rou
                         lat: position.coords.latitude,
                         lng: position.coords.longitude,
                     };
-                    setCenter(currentPosition);
                     setCurrentLocation(currentPosition);
+                    setCenter(currentPosition); // Pan map to current location
                     map.panTo(currentPosition);
                     map.setZoom(14);
                     findStations({ latitude: currentPosition.lat, longitude: currentPosition.lng, radius: 10000 })
@@ -62,6 +62,7 @@ export default function MapView({ onStationsFound, stations, onStationClick, rou
                 },
                 () => {
                     toast({ title: 'Could not get your location. Showing default.' });
+                    setCurrentLocation(defaultCenter);
                     findStations({ latitude: defaultCenter.lat, longitude: defaultCenter.lng, radius: 10000 })
                        .then(onStationsFound)
                        .catch(err => {
@@ -72,6 +73,7 @@ export default function MapView({ onStationsFound, stations, onStationClick, rou
             );
         } else {
              toast({ title: 'Geolocation not supported. Showing default location.' });
+             setCurrentLocation(defaultCenter);
              findStations({ latitude: defaultCenter.lat, longitude: defaultCenter.lng, radius: 10000 })
                 .then(onStationsFound)
                 .catch(err => {
@@ -121,18 +123,20 @@ export default function MapView({ onStationsFound, stations, onStationClick, rou
             {isLoaded && (
               <>
                 {/* Marker for current location */}
-                <MarkerF
-                    position={currentLocation}
-                    title="Your Location"
-                    icon={{
-                        path: google.maps.SymbolPath.CIRCLE,
-                        fillColor: '#4285F4',
-                        fillOpacity: 1,
-                        strokeColor: '#ffffff',
-                        strokeWeight: 2,
-                        scale: 8,
-                    }}
-                />
+                {currentLocation && (
+                  <MarkerF
+                      position={currentLocation}
+                      title="Your Location"
+                      icon={{
+                          path: google.maps.SymbolPath.CIRCLE,
+                          fillColor: '#4285F4',
+                          fillOpacity: 1,
+                          strokeColor: '#ffffff',
+                          strokeWeight: 2,
+                          scale: 8,
+                      }}
+                  />
+                )}
                 
                 {/* Markers for EV stations */}
                 {stations.map(station => (
