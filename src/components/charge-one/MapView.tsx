@@ -147,7 +147,7 @@ export default function MapView({
                     zoomControl: true,
                 }}
               >
-                {directions ? (
+                {directions && directions.routes && directions.routes.length > 0 ? (
                     <>
                     <DirectionsRenderer 
                         directions={directions} 
