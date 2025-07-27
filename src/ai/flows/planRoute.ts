@@ -91,7 +91,7 @@ const planRouteFlow = ai.defineFlow(
         const originStr = `${input.origin.lat},${input.origin.lng}`;
         const initialDirections = await getDirections(originStr, input.destination);
 
-        if (initialDirections.status !== 'OK') {
+        if (initialDirections.status !== 'OK' || !initialDirections.routes || initialDirections.routes.length === 0) {
             return {
                 hasSufficientCharge: false,
                 errorMessage: `Could not find a route. Directions API status: ${initialDirections.status}`,
@@ -115,6 +115,12 @@ const planRouteFlow = ai.defineFlow(
         
         // Charge is not sufficient, find a charging station.
         const overview_path = initialDirections.routes[0].overview_path;
+        if (!overview_path || overview_path.length === 0) {
+             return {
+                hasSufficientCharge: false,
+                errorMessage: "Could not calculate a valid path to find a charging station.",
+            };
+        }
         const midPointIndex = Math.floor(overview_path.length / 2);
         const midPoint = overview_path[midPointIndex];
         
