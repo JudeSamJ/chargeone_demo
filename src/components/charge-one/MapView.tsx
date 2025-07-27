@@ -1,3 +1,4 @@
+
 "use client";
 
 import { GoogleMap, useJsApiLoader, MarkerF, DirectionsRenderer } from '@react-google-maps/api';
@@ -26,16 +27,16 @@ interface MapViewProps {
   stations: Station[];
   route: google.maps.DirectionsResult | null;
   onLocationUpdate: (location: google.maps.LatLngLiteral) => void;
+  currentLocation: google.maps.LatLngLiteral | null;
 }
 
-export default function MapView({ onStationsFound, stations, onStationClick, route, onLocationUpdate }: MapViewProps) {
+export default function MapView({ onStationsFound, stations, onStationClick, route, onLocationUpdate, currentLocation }: MapViewProps) {
     const { isLoaded, loadError } = useJsApiLoader({
         googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "",
         libraries: ['places'],
     });
     
     const [center, setCenter] = useState(defaultCenter);
-    const [currentLocation, setCurrentLocation] = useState<google.maps.LatLngLiteral | null>(null);
     const [destinationLocation, setDestinationLocation] = useState<google.maps.LatLngLiteral | null>(null);
     const { toast } = useToast();
     const mapRef = useRef<google.maps.Map | null>(null);
@@ -44,17 +45,27 @@ export default function MapView({ onStationsFound, stations, onStationClick, rou
 
     const onMapLoad = useCallback((map: google.maps.Map) => {
         mapRef.current = map;
-        // Start tracking location once map is loaded
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(
+    }, []);
+
+    useEffect(() => {
+        let watchId: number;
+
+        if (navigator.geolocation && isLoaded) {
+            watchId = navigator.geolocation.watchPosition(
                 (position) => {
                     const currentPos = {
                         lat: position.coords.latitude,
                         lng: position.coords.longitude,
                     };
-                    setCurrentLocation(currentPos);
+                    
                     onLocationUpdate(currentPos);
-                    setCenter(currentPos);
+
+                    if (!route) {
+                        setCenter(currentPos);
+                        if (mapRef.current?.getZoom()! < 14) {
+                            mapRef.current?.setZoom(14);
+                        }
+                    }
 
                      if (!stationsFetchedRef.current) {
                         stationsFetchedRef.current = true;
@@ -66,7 +77,8 @@ export default function MapView({ onStationsFound, stations, onStationClick, rou
                             });
                     }
                 },
-                () => {
+                (error) => {
+                    console.error("Geolocation error:", error);
                     toast({ title: 'Could not get your location. Showing default.' });
                      if (!stationsFetchedRef.current) {
                         stationsFetchedRef.current = true;
@@ -77,7 +89,8 @@ export default function MapView({ onStationsFound, stations, onStationClick, rou
                                toast({ variant: 'destructive', title: 'Could not find stations near default location.'});
                            });
                     }
-                }
+                },
+                { enableHighAccuracy: true }
             );
         } else {
              toast({ title: 'Geolocation not supported. Showing default location.' });
@@ -91,7 +104,14 @@ export default function MapView({ onStationsFound, stations, onStationClick, rou
                     });
             }
         }
-    }, [onLocationUpdate, onStationsFound, toast]);
+
+        return () => {
+            if (watchId) {
+                navigator.geolocation.clearWatch(watchId);
+            }
+        };
+    }, [isLoaded, onLocationUpdate, onStationsFound, toast, route]);
+
 
     useEffect(() => {
         if (route && mapRef.current && isLoaded) {
@@ -226,3 +246,4 @@ export default function MapView({ onStationsFound, stations, onStationClick, rou
         </GoogleMap>
     );
 }
+

@@ -153,6 +153,7 @@ function HomePageContent() {
         onStationClick={handleStationSelect}
         route={route}
         onLocationUpdate={setCurrentLocation}
+        currentLocation={currentLocation}
       />
       <Toaster />
     </div>
