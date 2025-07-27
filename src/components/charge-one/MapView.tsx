@@ -42,7 +42,6 @@ export default function MapView({
   const [error, setError] = useState<string | null>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const [directionsOptions, setDirectionsOptions] = useState<google.maps.DirectionsRendererOptions | null>(null);
 
   const fetchStationsForCenter = useCallback(async (center: { lat: number, lng: number }) => {
       try {
@@ -101,17 +100,6 @@ export default function MapView({
             );
             mapRef.current.fitBounds(bounds);
         }
-        
-        setDirectionsOptions({
-            suppressMarkers: true,
-            polylineOptions: {
-                strokeColor: '#29ABE2',
-                strokeWeight: 6,
-            }
-        });
-
-    } else {
-        setDirectionsOptions(null);
     }
   }, [directions]);
 
@@ -157,11 +145,17 @@ export default function MapView({
                     zoomControl: true,
                 }}
               >
-                {directions && directionsOptions && directions.routes && directions.routes.length > 0 ? (
+                {directions && directions.routes && directions.routes.length > 0 ? (
                     <>
                     <DirectionsRenderer
                         directions={directions} 
-                        options={directionsOptions}
+                        options={{
+                            suppressMarkers: true,
+                            polylineOptions: {
+                                strokeColor: '#29ABE2',
+                                strokeWeight: 6,
+                            }
+                        }}
                     />
                     {directions.routes[0].legs[0].start_location && (
                          <MarkerF 
