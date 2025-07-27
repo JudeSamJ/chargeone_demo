@@ -170,7 +170,7 @@ export default function MapView({ onStationsFound, stations, onStationClick, rou
                       options={{
                           suppressMarkers: true,
                           polylineOptions: {
-                              strokeColor: 'hsl(var(--primary))',
+                              strokeColor: '#4285F4',
                               strokeWeight: 6,
                           }
                       }}
