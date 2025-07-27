@@ -33,18 +33,16 @@ export default function MapView({ stations, selectedStation, onStationSelect, on
 
     const mapRef = useRef<google.maps.Map | null>(null);
     const [center, setCenter] = useState(defaultCenter);
+    const [currentLocation, setCurrentLocation] = useState<google.maps.LatLngLiteral | null>(null);
 
     const searchForStations = useCallback(async (location: { lat: number, lng: number }) => {
-        // Do not search for nearby stations if a route is active
         if (route) return; 
         try {
-            console.log("Searching for stations near:", location);
             const foundStations = await findStations({
                 latitude: location.lat,
                 longitude: location.lng,
                 radius: 10000 // 10km
             });
-            console.log("Found stations:", foundStations);
             onStationsFound(foundStations);
         } catch(e) {
             console.error("Error finding stations", e);
@@ -62,6 +60,7 @@ export default function MapView({ stations, selectedStation, onStationSelect, on
                         lng: position.coords.longitude,
                     };
                     setCenter(newCenter);
+                    setCurrentLocation(newCenter);
                     map.panTo(newCenter);
                     searchForStations(newCenter);
                 },
@@ -80,19 +79,16 @@ export default function MapView({ stations, selectedStation, onStationSelect, on
         if (route && mapRef.current) {
             const bounds = new google.maps.LatLngBounds();
             route.routes[0].legs.forEach(leg => {
-                leg.steps.forEach(step => {
-                    if (step.path) {
-                        step.path.forEach(path => {
-                            bounds.extend(path);
-                        })
-                    }
-                })
-            })
+                if (leg.start_location) bounds.extend(leg.start_location);
+                if (leg.end_location) bounds.extend(leg.end_location);
+            });
             if (!bounds.isEmpty()) {
               mapRef.current.fitBounds(bounds);
             }
         }
     }, [route]);
+
+    const destinationMarkerPosition = route?.routes[0]?.legs[0]?.end_location;
 
 
     if (loadError) return <div className="flex items-center justify-center h-screen w-screen bg-muted rounded-lg"><p>Error loading map</p></div>;
@@ -110,9 +106,23 @@ export default function MapView({ stations, selectedStation, onStationSelect, on
                 styles: mapStyles,
             }}
         >
-            {route && <DirectionsRenderer directions={route} options={{ suppressMarkers: true, polylineOptions: { strokeColor: 'hsl(var(--primary))', strokeWeight: 6 } }} />}
+            {route && (
+              <>
+                <DirectionsRenderer directions={route} options={{ suppressMarkers: true, polylineOptions: { strokeColor: 'hsl(var(--primary))', strokeWeight: 6 } }} />
+                {destinationMarkerPosition && <Marker position={destinationMarkerPosition} />}
+              </>
+            )}
 
-            {stations.map(station => (
+            {currentLocation && <Marker position={currentLocation} icon={{
+                path: window.google.maps.SymbolPath.CIRCLE,
+                scale: 8,
+                fillColor: '#4285F4',
+                fillOpacity: 1,
+                strokeColor: 'white',
+                strokeWeight: 2
+            }} />}
+
+            {!route && stations.map(station => (
                  <Marker
                     key={station.id}
                     position={{ lat: station.lat, lng: station.lng }}
@@ -120,6 +130,18 @@ export default function MapView({ stations, selectedStation, onStationSelect, on
                     icon={{
                         url: station.isAvailable ? '/green-dot.png' : '/red-dot.png',
                         scaledSize: new window.google.maps.Size(15, 15),
+                    }}
+                />
+            ))}
+            
+            {route && stations.map(station => (
+                 <Marker
+                    key={station.id}
+                    position={{ lat: station.lat, lng: station.lng }}
+                    onClick={() => onStationSelect(station)}
+                     icon={{
+                        url: '/charging.png',
+                        scaledSize: new window.google.maps.Size(30, 30)
                     }}
                 />
             ))}
@@ -140,4 +162,3 @@ export default function MapView({ stations, selectedStation, onStationSelect, on
         </GoogleMap>
     );
 }
-
