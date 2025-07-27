@@ -47,18 +47,15 @@ export default function MapView({
       try {
         const fetchedStations = await findStations({ lat: center.lat, lng: center.lng });
         
-        const existingStationIds = new Set(stations.map(s => s.id));
-        const newStations = fetchedStations.filter(s => !existingStationIds.has(s.id));
-        
-        const allStations = [...stations, ...newStations]
-        setStations(allStations);
-        onStationsLoaded(allStations);
+        setStations(fetchedStations);
+        onStationsLoaded(fetchedStations);
+
         setError(null);
       } catch (err) {
         console.error("Error fetching stations:", err);
         setError("Could not load station data. Please ensure the Places API is enabled for your API key.");
       }
-  }, [onStationsLoaded, stations]);
+  }, [onStationsLoaded]);
 
 
   const onMapIdle = useCallback(() => {
@@ -150,7 +147,8 @@ export default function MapView({
               >
                 {directions && directions.routes && directions.routes.length > 0 ? (
                     <>
-                    <DirectionsRenderer 
+                    <DirectionsRenderer
+                        key={directions.routes[0].overview_polyline} 
                         directions={directions} 
                         options={{
                             suppressMarkers: true,
