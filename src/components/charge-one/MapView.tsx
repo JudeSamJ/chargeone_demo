@@ -34,9 +34,9 @@ export default function MapView({ stations, selectedStation, onStationSelect, on
     const mapRef = useRef<google.maps.Map | null>(null);
     const [center, setCenter] = useState(defaultCenter);
     const [currentLocation, setCurrentLocation] = useState<google.maps.LatLngLiteral | null>(null);
+    const hasSearched = useRef(false); // Add a ref to track if initial search has been done
 
     const searchForStations = useCallback(async (location: { lat: number, lng: number }) => {
-        if (route) return; 
         try {
             const foundStations = await findStations({
                 latitude: location.lat,
@@ -47,11 +47,13 @@ export default function MapView({ stations, selectedStation, onStationSelect, on
         } catch(e) {
             console.error("Error finding stations", e);
         }
-    }, [onStationsFound, route]);
+    }, [onStationsFound]);
 
 
     const onMapLoad = useCallback((map: google.maps.Map) => {
         mapRef.current = map;
+        if (hasSearched.current) return; // Prevent re-searching if map re-renders
+
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
                 (position) => {
@@ -62,16 +64,25 @@ export default function MapView({ stations, selectedStation, onStationSelect, on
                     setCenter(newCenter);
                     setCurrentLocation(newCenter);
                     map.panTo(newCenter);
-                    searchForStations(newCenter);
+                    if (!hasSearched.current) {
+                        searchForStations(newCenter);
+                        hasSearched.current = true;
+                    }
                 },
                 () => {
                     // Geolocation failed, search at default location
-                    searchForStations(defaultCenter);
+                    if (!hasSearched.current) {
+                        searchForStations(defaultCenter);
+                        hasSearched.current = true;
+                    }
                 }
             );
         } else {
              // Geolocation not supported, search at default location
-             searchForStations(defaultCenter);
+             if (!hasSearched.current) {
+                searchForStations(defaultCenter);
+                hasSearched.current = true;
+            }
         }
     }, [searchForStations]);
 
@@ -80,8 +91,9 @@ export default function MapView({ stations, selectedStation, onStationSelect, on
             const routeBoundsData = route.routes[0]?.bounds;
             if (routeBoundsData) {
                 const bounds = new google.maps.LatLngBounds(
-                    routeBoundsData.southwest, 
-                    routeBoundsData.northeast 
+                    // The API returns a literal, we need to convert it for the JS library
+                    new google.maps.LatLng(routeBoundsData.southwest.lat, routeBoundsData.southwest.lng), 
+                    new google.maps.LatLng(routeBoundsData.northeast.lat, routeBoundsData.northeast.lng)
                 );
                 mapRef.current.fitBounds(bounds);
             }

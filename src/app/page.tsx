@@ -49,8 +49,8 @@ function HomePageContent() {
   
   const handleStationSelect = (station: Station | null) => {
     setSelectedStation(station);
-    // This logic was flawed. We should not clear the route when a station is selected/deselected.
-    // The route should only be cleared when a new one is planned or explicitly cleared.
+    // The route should only be cleared when a new one is planned.
+    // Do NOT clear it here.
   };
 
   const handleEndSession = (cost: number) => {
@@ -99,8 +99,6 @@ function HomePageContent() {
             destination,
             vehicle: userVehicle
         });
-        // This is the critical state update.
-        // Set the route and the stations from the flow's result.
         setRoute(result.route);
         setStations(result.chargingStations);
     } catch (error) {
@@ -111,9 +109,11 @@ function HomePageContent() {
     }
   };
 
+  // The `useCallback` hook is essential here to prevent the function from
+  // being recreated on every render, which would cause an infinite loop in MapView's useEffect.
   const onStationsFound = useCallback((foundStations: Station[]) => {
     setStations(foundStations);
-  }, []);
+  }, []); // The dependency array is empty because setStations is a stable function.
 
   if (loading || (!user && !isGuest) || !userVehicle) {
     return (

@@ -6,8 +6,7 @@
 
 import { ai } from '@/ai/genkit';
 import { Station, FindStationsInputSchema, FindStationsOutputSchema, FindStationsInput, StationSchema } from '@/lib/types';
-import { findPlace, getPlaceDetails } from '@/lib/google-maps';
-import { z } from 'genkit';
+import { findPlace } from '@/lib/google-maps';
 
 export async function findStations(input: FindStationsInput): Promise<Station[]> {
   return findStationsFlow(input);
@@ -42,11 +41,12 @@ const findStationsFlow = ai.defineFlow(
       isAvailable: p.opening_hours?.open_now || false,
       lat: p.geometry.location.lat,
       lng: p.geometry.location.lng,
-    }));
+    })).filter((station: any): station is Station => {
+        // This safe-guard ensures that any station that doesn't conform to the schema after mapping is filtered out.
+        // This is crucial for preventing bad data from the API from crashing the app.
+        return StationSchema.safeParse(station).success;
+    });
     
-    // Filter out any stations that don't conform to the schema after mapping
-    // This is a safe-guard against bad data from the API
-    return stations.filter(station => StationSchema.safeParse(station).success);
+    return stations;
   }
 );
-
