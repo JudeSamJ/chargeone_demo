@@ -1,11 +1,12 @@
 
 "use client";
 
-import { GoogleMap, MarkerF, useJsApiLoader, PolylineF } from '@react-google-maps/api';
+import { GoogleMap, MarkerF, PolylineF, useJsApiLoader } from '@react-google-maps/api';
 import type { Station } from '@/lib/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { findStations } from '@/ai/flows/findStations';
+
 
 interface MapViewProps {
     stations: Station[];
@@ -154,7 +155,7 @@ export default function MapView({
                         onClick={() => onSelectStation(station)}
                         title={station.name}
                         icon={{
-                            path: typeof window !== 'undefined' ? window.google.maps.SymbolPath.CIRCLE : '',
+                            path: typeof window !== 'undefined' && window.google ? window.google.maps.SymbolPath.CIRCLE : '',
                             scale: station.id === selectedStationId ? 10 : 7,
                             fillColor: station.isAvailable ? "#10B981" : "#F59E0B",
                             fillOpacity: 1,
