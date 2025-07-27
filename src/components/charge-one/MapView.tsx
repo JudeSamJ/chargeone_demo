@@ -1,12 +1,12 @@
 
 "use client";
 
-import { GoogleMap, useJsApiLoader, MarkerF, DirectionsRenderer } from '@react-google-maps/api';
-import { mapStyles } from '@/lib/map-styles';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { GoogleMap, useJsApiLoader, MarkerF } from '@react-google-maps/api';
+import { useCallback, useState } from 'react';
 import { findStations } from '@/ai/flows/findStations';
 import type { Station } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
+import { mapStyles } from '@/lib/map-styles';
 
 const mapContainerStyle = {
   width: '100vw',
@@ -22,22 +22,18 @@ interface MapViewProps {
   onStationsFound: (stations: Station[]) => void;
   onStationClick: (station: Station) => void;
   stations: Station[];
-  route: google.maps.DirectionsResult | null;
 }
 
-export default function MapView({ onStationsFound, stations, onStationClick, route }: MapViewProps) {
+export default function MapView({ onStationsFound, stations, onStationClick }: MapViewProps) {
     const { isLoaded, loadError } = useJsApiLoader({
         googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "",
         libraries: ['places'],
     });
 
-    const mapRef = useRef<google.maps.Map | null>(null);
     const [center, setCenter] = useState(defaultCenter);
     const { toast } = useToast();
 
     const onMapLoad = useCallback((map: google.maps.Map) => {
-        mapRef.current = map;
-        // Get user's current location
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
                 (position) => {
@@ -48,7 +44,6 @@ export default function MapView({ onStationsFound, stations, onStationClick, rou
                     setCenter(currentPosition);
                     map.panTo(currentPosition);
                     map.setZoom(14);
-                    // Find stations near the user's location
                     findStations({ latitude: currentPosition.lat, longitude: currentPosition.lng, radius: 10000 })
                         .then(onStationsFound)
                         .catch(err => {
@@ -57,7 +52,6 @@ export default function MapView({ onStationsFound, stations, onStationClick, rou
                         });
                 },
                 () => {
-                    // Geolocation failed, use default center
                     toast({ title: 'Could not get your location.' });
                     findStations({ latitude: defaultCenter.lat, longitude: defaultCenter.lng, radius: 10000 })
                        .then(onStationsFound)
@@ -85,22 +79,18 @@ export default function MapView({ onStationsFound, stations, onStationClick, rou
                 styles: mapStyles,
             }}
         >
-            {route ? (
-                <DirectionsRenderer directions={route} />
-            ) : (
-                stations.map(station => (
-                    <MarkerF
-                        key={station.id}
-                        position={{ lat: station.lat, lng: station.lng }}
-                        title={station.name}
-                        icon={{
-                            url: station.isAvailable ? '/green-dot.png' : '/red-dot.png',
-                            scaledSize: new google.maps.Size(20, 20),
-                        }}
-                        onClick={() => onStationClick(station)}
-                    />
-                ))
-            )}
+            {stations.map(station => (
+                <MarkerF
+                    key={station.id}
+                    position={{ lat: station.lat, lng: station.lng }}
+                    title={station.name}
+                    icon={{
+                        url: station.isAvailable ? '/green-dot.png' : '/red-dot.png',
+                        scaledSize: new google.maps.Size(20, 20),
+                    }}
+                    onClick={() => onStationClick(station)}
+                />
+            ))}
         </GoogleMap>
     );
 }
