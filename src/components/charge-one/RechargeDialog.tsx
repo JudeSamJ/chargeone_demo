@@ -17,20 +17,48 @@ interface RechargeDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   onRecharge: (amount: number) => void;
+  razorpayKeyId?: string;
 }
 
-export default function RechargeDialog({ isOpen, onOpenChange, onRecharge }: RechargeDialogProps) {
+declare const Razorpay: any;
+
+export default function RechargeDialog({ isOpen, onOpenChange, onRecharge, razorpayKeyId }: RechargeDialogProps) {
   const [amount, setAmount] = useState('');
 
   const handleRechargeClick = () => {
     const rechargeAmount = parseFloat(amount);
-    if (!isNaN(rechargeAmount) && rechargeAmount > 0) {
-      // In a real integration, you would use the public Razorpay key ID here
-      // to initialize the checkout process on the client-side.
-      console.log("Using Razorpay Key ID:", process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID);
-      onRecharge(rechargeAmount);
-      setAmount('');
+    if (!razorpayKeyId || isNaN(rechargeAmount) || rechargeAmount <= 0) {
+      return;
     }
+
+    const options = {
+      key: razorpayKeyId,
+      amount: rechargeAmount * 100, // Amount in paisa
+      currency: "INR",
+      name: "ChargeOne Wallet",
+      description: "Recharge your wallet",
+      image: "https://placehold.co/100x100.png", // Replace with your logo
+      handler: function (response: any) {
+        // This function is called upon successful payment
+        // You would typically verify the payment signature on your server here
+        onRecharge(rechargeAmount);
+        setAmount('');
+      },
+      prefill: {
+        name: "Test User",
+        email: "test.user@example.com",
+        contact: "9999999999"
+      },
+      notes: {
+        address: "Razorpay Corporate Office"
+      },
+      theme: {
+        color: "#3399cc"
+      }
+    };
+    
+    const rzp1 = new Razorpay(options);
+    rzp1.open();
   };
 
   const quickAmounts = [500, 1000, 2000];
@@ -41,7 +69,7 @@ export default function RechargeDialog({ isOpen, onOpenChange, onRecharge }: Rec
         <DialogHeader>
           <DialogTitle>Recharge Wallet</DialogTitle>
           <DialogDescription>
-            Add funds to your wallet. This is a simulated payment.
+            Add funds to your wallet using Razorpay.
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
@@ -67,13 +95,14 @@ export default function RechargeDialog({ isOpen, onOpenChange, onRecharge }: Rec
           </div>
            <div className="flex flex-col items-center justify-center p-4 rounded-lg bg-muted">
               <img src="https://razorpay.com/assets/razorpay-logo.svg" alt="Razorpay" className="h-8 mb-2" />
-              <p className="text-sm text-muted-foreground">Simulated Payment</p>
+              <p className="text-sm text-muted-foreground">Secure Payments</p>
           </div>
         </div>
         <DialogFooter>
-          <Button type="submit" onClick={handleRechargeClick} className="w-full">
+          <Button type="submit" onClick={handleRechargeClick} className="w-full" disabled={!razorpayKeyId}>
             Recharge with Razorpay
           </Button>
+          {!razorpayKeyId && <p className="text-xs text-destructive text-center w-full">Razorpay Key ID not configured.</p>}
         </DialogFooter>
       </DialogContent>
     </Dialog>

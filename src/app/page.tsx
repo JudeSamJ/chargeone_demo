@@ -138,6 +138,7 @@ function HomePageContent() {
         isOpen={isRechargeOpen}
         onOpenChange={setIsRechargeOpen}
         onRecharge={handleRecharge}
+        razorpayKeyId={process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID}
       />
       <Toaster />
     </div>
