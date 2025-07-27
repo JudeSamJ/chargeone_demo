@@ -1,7 +1,7 @@
 
 "use client";
 
-import { GoogleMap, MarkerF, useJsApiLoader, DirectionsRenderer } from '@react-google-maps/api';
+import { GoogleMap, MarkerF, useJsApiLoader, PolylineF } from '@react-google-maps/api';
 import type { Station } from '@/lib/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { useState, useRef, useCallback, useEffect } from 'react';
@@ -130,6 +130,8 @@ export default function MapView({
     );
   }
 
+  const routePath = directions?.routes?.[0]?.overview_path;
+
   return (
     <Card className="h-full">
         <CardContent className="p-0 h-full">
@@ -145,17 +147,15 @@ export default function MapView({
                     zoomControl: true,
                 }}
               >
-                {directions && directions.routes && directions.routes.length > 0 ? (
+                {directions && routePath ? (
                     <>
-                    <DirectionsRenderer
-                        directions={directions} 
-                        options={{
-                            suppressMarkers: true,
-                            polylineOptions: {
-                                strokeColor: '#29ABE2',
-                                strokeWeight: 6,
-                            }
-                        }}
+                    <PolylineF
+                      path={routePath}
+                      options={{
+                        strokeColor: '#29ABE2',
+                        strokeWeight: 6,
+                        strokeOpacity: 0.8,
+                      }}
                     />
                     {directions.routes[0].legs[0].start_location && (
                          <MarkerF 
