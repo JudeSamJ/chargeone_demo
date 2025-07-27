@@ -26,16 +26,17 @@ interface MapViewProps {
   onStationClick: (station: Station) => void;
   stations: Station[];
   route: google.maps.DirectionsResult | null;
+  currentLocation: google.maps.LatLngLiteral | null;
+  onLocationUpdate: (location: google.maps.LatLngLiteral) => void;
 }
 
-export default function MapView({ onStationsFound, stations, onStationClick, route }: MapViewProps) {
+export default function MapView({ onStationsFound, stations, onStationClick, route, currentLocation, onLocationUpdate }: MapViewProps) {
     const { isLoaded, loadError } = useJsApiLoader({
         googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "",
         libraries: ['places'],
     });
 
     const [center, setCenter] = useState(defaultCenter);
-    const [currentLocation, setCurrentLocation] = useState<google.maps.LatLngLiteral | null>(null);
     const [destinationLocation, setDestinationLocation] = useState<google.maps.LatLngLiteral | null>(null);
     const { toast } = useToast();
     const mapRef = useRef<google.maps.Map | null>(null);
@@ -58,7 +59,7 @@ export default function MapView({ onStationsFound, stations, onStationClick, rou
                         lat: position.coords.latitude,
                         lng: position.coords.longitude,
                     };
-                    setCurrentLocation(currentPosition);
+                    onLocationUpdate(currentPosition);
                     
                     // Only pan to location if not actively viewing a route
                     if (!route) {
@@ -115,7 +116,7 @@ export default function MapView({ onStationsFound, stations, onStationClick, rou
                 navigator.geolocation.clearWatch(watchId);
             }
         };
-    }, [isLoaded, onStationsFound, toast, route]);
+    }, [isLoaded, onStationsFound, toast, route, onLocationUpdate]);
 
 
     useEffect(() => {
@@ -230,13 +231,12 @@ export default function MapView({ onStationsFound, stations, onStationClick, rou
                         position={destinationLocation}
                         title="Destination"
                         icon={{
-                            path: google.maps.SymbolPath.FILLED_STAR,
+                            path: google.maps.SymbolPath.CIRCLE,
                             fillColor: '#FBBF24', // Amber
                             fillOpacity: 1,
                             strokeColor: '#ffffff',
                             strokeWeight: 2,
                             scale: 12,
-                            anchor: new google.maps.Point(0, 0),
                         }}
                     />
                 )}

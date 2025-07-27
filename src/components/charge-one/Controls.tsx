@@ -20,6 +20,7 @@ interface ControlsProps {
     isPlanningRoute: boolean;
     isRechargeOpen: boolean;
     handleRecharge: (amount: number) => void;
+    currentLocation: google.maps.LatLngLiteral | null;
 }
 
 export default function Controls({
@@ -33,6 +34,7 @@ export default function Controls({
     isPlanningRoute,
     isRechargeOpen,
     handleRecharge,
+    currentLocation,
 }: ControlsProps) {
     return (
         <div className="absolute top-0 left-0 z-10 h-screen w-full max-w-md flex flex-col">
@@ -48,7 +50,7 @@ export default function Controls({
                         vehicle={userVehicle}
                     />
                 ) : (
-                    <RoutePlanner onPlanRoute={handlePlanRoute} isPlanning={isPlanningRoute} />
+                    <RoutePlanner onPlanRoute={handlePlanRoute} isPlanning={isPlanningRoute} currentLocation={currentLocation}/>
                 )}
             </div>
              <RechargeDialog 

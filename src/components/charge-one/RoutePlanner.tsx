@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
@@ -11,9 +11,10 @@ import { Map, Route, LocateFixed, Loader } from 'lucide-react';
 interface RoutePlannerProps {
   onPlanRoute: (origin: string, destination: string) => void;
   isPlanning: boolean;
+  currentLocation: google.maps.LatLngLiteral | null;
 }
 
-export default function RoutePlanner({ onPlanRoute, isPlanning }: RoutePlannerProps) {
+export default function RoutePlanner({ onPlanRoute, isPlanning, currentLocation }: RoutePlannerProps) {
   const [origin, setOrigin] = useState('');
   const [destination, setDestination] = useState('');
 
@@ -24,18 +25,10 @@ export default function RoutePlanner({ onPlanRoute, isPlanning }: RoutePlannerPr
   };
 
   const handleUseCurrentLocation = () => {
-    if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-            (position) => {
-                setOrigin(`${position.coords.latitude}, ${position.coords.longitude}`);
-            },
-            (error) => {
-                console.error("Error getting location", error);
-                alert("Could not retrieve your location. Please enter it manually.");
-            }
-        );
+    if (currentLocation) {
+        setOrigin(`${currentLocation.lat}, ${currentLocation.lng}`);
     } else {
-        alert("Geolocation is not supported by this browser.");
+        alert("Could not retrieve your location. Please wait a moment or enter it manually.");
     }
   }
 
@@ -60,7 +53,7 @@ export default function RoutePlanner({ onPlanRoute, isPlanning }: RoutePlannerPr
                 value={origin}
                 onChange={(e) => setOrigin(e.target.value)}
             />
-            <Button variant="outline" size="icon" onClick={handleUseCurrentLocation} aria-label="Use current location">
+            <Button variant="outline" size="icon" onClick={handleUseCurrentLocation} aria-label="Use current location" disabled={!currentLocation}>
                 <LocateFixed className="h-4 w-4" />
             </Button>
           </div>

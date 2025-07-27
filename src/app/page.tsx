@@ -22,6 +22,8 @@ function HomePageContent() {
   const [userVehicle, setUserVehicle] = useState<Vehicle | null>(null);
   const [route, setRoute] = useState<google.maps.DirectionsResult | null>(null);
   const [isPlanningRoute, setIsPlanningRoute] = useState(false);
+  const [currentLocation, setCurrentLocation] = useState<google.maps.LatLngLiteral | null>(null);
+
 
   const { toast } = useToast();
   const { user, loading } = useAuth();
@@ -135,12 +137,15 @@ function HomePageContent() {
         isPlanningRoute={isPlanningRoute}
         isRechargeOpen={isRechargeOpen}
         handleRecharge={handleRecharge}
+        currentLocation={currentLocation}
       />
       <MapView 
         onStationsFound={handleStationsFound} 
         stations={stations}
         onStationClick={handleStationSelect}
         route={route}
+        currentLocation={currentLocation}
+        onLocationUpdate={setCurrentLocation}
       />
       <Toaster />
     </div>
