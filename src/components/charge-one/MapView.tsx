@@ -62,10 +62,12 @@ export default function MapView({ stations, selectedStation, onStationSelect, on
                     searchForStations(newCenter);
                 },
                 () => {
+                    // Geolocation failed, search at default location
                     searchForStations(defaultCenter);
                 }
             );
         } else {
+             // Geolocation not supported, search at default location
              searchForStations(defaultCenter);
         }
     }, [searchForStations]);
