@@ -21,13 +21,19 @@ const center = {
   lng: -118.2437
 };
 
+// --- THIS IS A TEMPORARY FIX ---
+// For a real application, use environment variables:
+// const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "";
+const apiKey = "PASTE_YOUR_GOOGLE_MAPS_API_KEY_HERE";
+
+
 export default function MapView({ stations, onSelectStation, selectedStationId }: MapViewProps) {
   const { isLoaded, loadError } = useJsApiLoader({
     id: 'google-map-script',
-    googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ""
+    googleMapsApiKey: apiKey
   })
 
-  if (loadError) {
+  if (loadError || apiKey === "PASTE_YOUR_GOOGLE_MAPS_API_KEY_HERE") {
     return (
         <Card>
             <CardHeader>
@@ -36,7 +42,7 @@ export default function MapView({ stations, onSelectStation, selectedStationId }
             <CardContent>
                 <div style={containerStyle} className="bg-destructive/20 text-destructive border border-destructive rounded-lg flex flex-col items-center justify-center text-center p-4">
                     <p className="font-medium">Map Error</p>
-                    <p className="text-sm">Could not load Google Maps. Please ensure you have a valid <code className="bg-destructive/20 p-1 rounded">NEXT_PUBLIC_GOOGLE_MAPS_API_KEY</code> in your .env.local file and have enabled the Maps JavaScript API in the Google Cloud Console.</p>
+                    <p className="text-sm">Could not load Google Maps. Please ensure you have a valid API key and have enabled the Maps JavaScript API in the Google Cloud Console. Paste your key directly into the `MapView.tsx` file.</p>
                 </div>
             </CardContent>
         </Card>
