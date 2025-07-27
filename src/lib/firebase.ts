@@ -19,7 +19,11 @@ let auth: Auth;
 
 // This check is crucial for client-side rendering in Next.js
 if (typeof window !== 'undefined') {
-    const missingConfigs = Object.entries(firebaseConfig)
+    const requiredConfigs = { ...firebaseConfig };
+    // measurementId is optional, so we remove it from the check
+    delete (requiredConfigs as any).measurementId;
+
+    const missingConfigs = Object.entries(requiredConfigs)
         .filter(([key, value]) => !value)
         .map(([key]) => key);
 
