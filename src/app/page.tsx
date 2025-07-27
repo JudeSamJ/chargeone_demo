@@ -1,9 +1,9 @@
 
 "use client";
 
-import { useState, Suspense, useEffect } from 'react';
+import { useState, Suspense, useEffect, useCallback } from 'react';
 import type { Station, Vehicle } from '@/lib/types';
-import { defaultVehicle, vehicles } from '@/lib/mock-data';
+import { defaultVehicle } from '@/lib/mock-data';
 import Header from '@/components/charge-one/Header';
 import WalletCard from '@/components/charge-one/WalletCard';
 import VehicleStatusCard from '@/components/charge-one/VehicleStatusCard';
@@ -26,6 +26,7 @@ function HomePageContent() {
   const [isRechargeOpen, setIsRechargeOpen] = useState(false);
   const [userVehicle, setUserVehicle] = useState<Vehicle | null>(null);
   const [route, setRoute] = useState<google.maps.DirectionsResult | null>(null);
+  const [isPlanningRoute, setIsPlanningRoute] = useState(false);
 
   const { toast } = useToast();
   const { user, loading } = useAuth();
@@ -41,14 +42,11 @@ function HomePageContent() {
       if (storedVehicle) {
         setUserVehicle(JSON.parse(storedVehicle));
       } else if(isGuest) {
-        // For guests, use a default vehicle so they can use the app
         const guestVehicle = { ...defaultVehicle, currentCharge: 80 };
         setUserVehicle(guestVehicle);
-        // Also save it so it persists if they refresh
         localStorage.setItem('userVehicle', JSON.stringify(guestVehicle));
       }
       else if (user) {
-        // If logged in but no vehicle, go to selection
         router.push('/vehicle-details');
       }
     }
@@ -100,6 +98,7 @@ function HomePageContent() {
         toast({ variant: 'destructive', title: 'Please select a vehicle first.' });
         return;
     }
+    setIsPlanningRoute(true);
     try {
         const result = await planRoute({
             origin,
@@ -107,13 +106,22 @@ function HomePageContent() {
             vehicle: userVehicle
         });
         setRoute(result.route);
-        setStations(result.chargingStations);
+        // If the route plan returns stations, display them. Otherwise, keep the existing ones.
+        if (result.chargingStations.length > 0) {
+            setStations(result.chargingStations);
+        }
         setSelectedStation(null);
     } catch (error) {
         console.error("Failed to plan route:", error);
         toast({ variant: 'destructive', title: 'Failed to plan route.' });
+    } finally {
+        setIsPlanningRoute(false);
     }
   };
+
+  const onStationsFound = useCallback((foundStations: Station[]) => {
+    setStations(foundStations);
+  }, []);
 
   if (loading || (!user && !isGuest) || !userVehicle) {
     return (
@@ -151,14 +159,14 @@ function HomePageContent() {
                 vehicle={userVehicle}
               />
             ) : (
-                <RoutePlanner onPlanRoute={handlePlanRoute} />
+                <RoutePlanner onPlanRoute={handlePlanRoute} isPlanning={isPlanningRoute} />
             )}
           </div>
           <div className="lg:col-span-2">
             <MapView 
               stations={stations} 
               onStationSelect={handleStationSelect} 
-              onStationsFound={setStations}
+              onStationsFound={onStationsFound}
               selectedStation={selectedStation}
               route={route}
             />

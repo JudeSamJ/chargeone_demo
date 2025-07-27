@@ -6,13 +6,14 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
-import { Map, Route } from 'lucide-react';
+import { Map, Route, LocateFixed, Loader } from 'lucide-react';
 
 interface RoutePlannerProps {
   onPlanRoute: (origin: string, destination: string) => void;
+  isPlanning: boolean;
 }
 
-export default function RoutePlanner({ onPlanRoute }: RoutePlannerProps) {
+export default function RoutePlanner({ onPlanRoute, isPlanning }: RoutePlannerProps) {
   const [origin, setOrigin] = useState('');
   const [destination, setDestination] = useState('');
 
@@ -21,6 +22,22 @@ export default function RoutePlanner({ onPlanRoute }: RoutePlannerProps) {
       onPlanRoute(origin, destination);
     }
   };
+
+  const handleUseCurrentLocation = () => {
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                setOrigin(`${position.coords.latitude}, ${position.coords.longitude}`);
+            },
+            (error) => {
+                console.error("Error getting location", error);
+                alert("Could not retrieve your location. Please enter it manually.");
+            }
+        );
+    } else {
+        alert("Geolocation is not supported by this browser.");
+    }
+  }
 
   return (
     <Card>
@@ -36,12 +53,17 @@ export default function RoutePlanner({ onPlanRoute }: RoutePlannerProps) {
       <CardContent className="space-y-4">
         <div className="space-y-2">
           <Label htmlFor="origin">Origin</Label>
-          <Input 
-            id="origin" 
-            placeholder="e.g., Delhi" 
-            value={origin}
-            onChange={(e) => setOrigin(e.target.value)}
-          />
+          <div className="flex items-center gap-2">
+            <Input 
+                id="origin" 
+                placeholder="e.g., Delhi or lat,lng" 
+                value={origin}
+                onChange={(e) => setOrigin(e.target.value)}
+            />
+            <Button variant="outline" size="icon" onClick={handleUseCurrentLocation} aria-label="Use current location">
+                <LocateFixed className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
         <div className="space-y-2">
           <Label htmlFor="destination">Destination</Label>
@@ -54,9 +76,9 @@ export default function RoutePlanner({ onPlanRoute }: RoutePlannerProps) {
         </div>
       </CardContent>
       <CardFooter>
-        <Button className="w-full" onClick={handlePlanRoute} disabled={!origin || !destination}>
-          <Map className="mr-2" />
-          Plan My Route
+        <Button className="w-full" onClick={handlePlanRoute} disabled={!origin || !destination || isPlanning}>
+          {isPlanning ? <Loader className="mr-2 animate-spin" /> : <Map className="mr-2" />}
+          {isPlanning ? 'Planning...' : 'Plan My Route'}
         </Button>
       </CardFooter>
     </Card>

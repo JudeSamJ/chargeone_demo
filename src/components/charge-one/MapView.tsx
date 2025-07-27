@@ -34,9 +34,22 @@ export default function MapView({ stations, selectedStation, onStationSelect, on
     const mapRef = useRef<google.maps.Map | null>(null);
     const [center, setCenter] = useState(defaultCenter);
 
+    const searchForStations = useCallback(async (location: { lat: number, lng: number }) => {
+        try {
+            const foundStations = await findStations({
+                latitude: location.lat,
+                longitude: location.lng,
+                radius: 10000 // 10km
+            });
+            onStationsFound(foundStations);
+        } catch(e) {
+            console.error("Error finding stations", e);
+        }
+    }, [onStationsFound]);
+
+
     const onMapLoad = useCallback((map: google.maps.Map) => {
         mapRef.current = map;
-        // Optionally, get user's current location
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
                 (position) => {
@@ -49,36 +62,26 @@ export default function MapView({ stations, selectedStation, onStationSelect, on
                     searchForStations(newCenter);
                 },
                 () => {
-                    // Handle error or user denial
                     searchForStations(defaultCenter);
                 }
             );
         } else {
              searchForStations(defaultCenter);
         }
-    }, []);
+    }, [searchForStations]);
 
-    const searchForStations = async (location: { lat: number, lng: number }) => {
-        try {
-            const foundStations = await findStations({
-                latitude: location.lat,
-                longitude: location.lng,
-                radius: 10000 // 10km
-            });
-            onStationsFound(foundStations);
-        } catch(e) {
-            console.error("Error finding stations", e);
-        }
-    }
+    
 
      useEffect(() => {
         if (route && mapRef.current) {
             const bounds = new google.maps.LatLngBounds();
             route.routes[0].legs.forEach(leg => {
                 leg.steps.forEach(step => {
-                    step.path.forEach(path => {
-                        bounds.extend(path);
-                    })
+                    if (step.path) {
+                        step.path.forEach(path => {
+                            bounds.extend(path);
+                        })
+                    }
                 })
             })
             mapRef.current.fitBounds(bounds);
@@ -101,7 +104,7 @@ export default function MapView({ stations, selectedStation, onStationSelect, on
                 styles: mapStyles
             }}
         >
-            {route && <DirectionsRenderer directions={route} options={{ suppressMarkers: true }} />}
+            {route && <DirectionsRenderer directions={route} options={{ suppressMarkers: true, polylineOptions: { strokeColor: 'hsl(var(--primary))', strokeWeight: 6 } }} />}
 
             {stations.map(station => (
                  <Marker
@@ -123,7 +126,7 @@ export default function MapView({ stations, selectedStation, onStationSelect, on
                     <div className="p-2 max-w-xs">
                         <h4 className="font-bold text-md">{selectedStation.name}</h4>
                         <p className="text-sm text-muted-foreground">{selectedStation.location}</p>
-                        <p className="text-sm mt-1">{selectedStation.distance.toFixed(1)} km away</p>
+                        <p className="text-sm mt-1">{selectedStation.power} kW</p>
                         <p className="text-sm font-semibold mt-2">₹{selectedStation.pricePerKwh.toFixed(2)} / kWh</p>
                     </div>
                 </InfoWindow>
