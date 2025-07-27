@@ -34,7 +34,7 @@ export default function MapView({ stations, selectedStation, onStationSelect, on
     const mapRef = useRef<google.maps.Map | null>(null);
     const [center, setCenter] = useState(defaultCenter);
     const [currentLocation, setCurrentLocation] = useState<google.maps.LatLngLiteral | null>(null);
-    const hasSearched = useRef(false); // Add a ref to track if initial search has been done
+    const hasSearched = useRef(false);
 
     const searchForStations = useCallback(async (location: { lat: number, lng: number }) => {
         try {
@@ -52,46 +52,41 @@ export default function MapView({ stations, selectedStation, onStationSelect, on
 
     const onMapLoad = useCallback((map: google.maps.Map) => {
         mapRef.current = map;
-        if (hasSearched.current) return; // Prevent re-searching if map re-renders
 
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(
-                (position) => {
-                    const newCenter = {
-                        lat: position.coords.latitude,
-                        lng: position.coords.longitude,
-                    };
-                    setCenter(newCenter);
-                    setCurrentLocation(newCenter);
-                    map.panTo(newCenter);
-                    if (!hasSearched.current) {
-                        searchForStations(newCenter);
-                        hasSearched.current = true;
-                    }
-                },
-                () => {
-                    // Geolocation failed, search at default location
-                    if (!hasSearched.current) {
-                        searchForStations(defaultCenter);
-                        hasSearched.current = true;
-                    }
+        // This ensures that we only run the initial search once
+        if (hasSearched.current) return; 
+
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                const newCenter = {
+                    lat: position.coords.latitude,
+                    lng: position.coords.longitude,
+                };
+                setCenter(newCenter);
+                setCurrentLocation(newCenter);
+                map.panTo(newCenter);
+                // Only search if we haven't searched before
+                if (!hasSearched.current) {
+                    searchForStations(newCenter);
+                    hasSearched.current = true;
                 }
-            );
-        } else {
-             // Geolocation not supported, search at default location
-             if (!hasSearched.current) {
-                searchForStations(defaultCenter);
-                hasSearched.current = true;
+            },
+            () => {
+                // Geolocation failed, search at default location
+                if (!hasSearched.current) {
+                    searchForStations(defaultCenter);
+                    hasSearched.current = true;
+                }
             }
-        }
+        );
     }, [searchForStations]);
 
     useEffect(() => {
         if (route && mapRef.current && window.google) {
             const routeBoundsData = route.routes[0]?.bounds;
             if (routeBoundsData) {
+                // The Directions API returns a LatLngBoundsLiteral. The JS API needs a LatLngBounds object.
                 const bounds = new google.maps.LatLngBounds(
-                    // The API returns a literal, we need to convert it for the JS library
                     new google.maps.LatLng(routeBoundsData.southwest.lat, routeBoundsData.southwest.lng), 
                     new google.maps.LatLng(routeBoundsData.northeast.lat, routeBoundsData.northeast.lng)
                 );
@@ -117,14 +112,6 @@ export default function MapView({ stations, selectedStation, onStationSelect, on
                 styles: mapStyles,
             }}
         >
-            {/* Draw the route and destination marker if a route exists */}
-            {route && (
-              <>
-                <DirectionsRenderer directions={route} options={{ suppressMarkers: true, polylineOptions: { strokeColor: 'hsl(var(--primary))', strokeWeight: 6, zIndex: 50 } }} />
-                {destinationMarkerPosition && <Marker position={destinationMarkerPosition} zIndex={100} />}
-              </>
-            )}
-
             {/* Draw the user's current location marker */}
             {currentLocation && <Marker position={currentLocation} icon={{
                 path: window.google.maps.SymbolPath.CIRCLE,
@@ -134,29 +121,25 @@ export default function MapView({ stations, selectedStation, onStationSelect, on
                 strokeColor: 'white',
                 strokeWeight: 2
             }} />}
+            
+            {/* If a route is planned, render it */}
+            {route && (
+              <>
+                <DirectionsRenderer directions={route} options={{ suppressMarkers: true, polylineOptions: { strokeColor: 'hsl(var(--primary))', strokeWeight: 6, zIndex: 50 } }} />
+                {destinationMarkerPosition && <Marker position={destinationMarkerPosition} zIndex={100} />}
+              </>
+            )}
 
-            {/* If there is no route, show nearby stations with green/red dots */}
-            {!route && stations.map(station => (
+            {/* Render station markers */}
+            {stations.map(station => (
                  <Marker
                     key={station.id}
                     position={{ lat: station.lat, lng: station.lng }}
                     onClick={() => onStationSelect(station)}
                     icon={{
-                        url: station.isAvailable ? '/green-dot.png' : '/red-dot.png',
-                        scaledSize: new window.google.maps.Size(15, 15),
-                    }}
-                />
-            ))}
-            
-            {/* If there IS a route, show the stations found along the route with a charging icon */}
-            {route && stations.map(station => (
-                 <Marker
-                    key={station.id}
-                    position={{ lat: station.lat, lng: station.lng }}
-                    onClick={() => onStationSelect(station)}
-                     icon={{
-                        url: '/charging.png',
-                        scaledSize: new window.google.maps.Size(30, 30)
+                        // Use a charging icon if a route is planned, otherwise use dots.
+                        url: route ? '/charging.png' : (station.isAvailable ? '/green-dot.png' : '/red-dot.png'),
+                        scaledSize: route ? new window.google.maps.Size(30, 30) : new window.google.maps.Size(15, 15),
                     }}
                 />
             ))}

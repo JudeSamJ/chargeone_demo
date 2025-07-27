@@ -49,8 +49,6 @@ function HomePageContent() {
   
   const handleStationSelect = (station: Station | null) => {
     setSelectedStation(station);
-    // The route should only be cleared when a new one is planned.
-    // Do NOT clear it here.
   };
 
   const handleEndSession = (cost: number) => {
@@ -113,7 +111,7 @@ function HomePageContent() {
   // being recreated on every render, which would cause an infinite loop in MapView's useEffect.
   const onStationsFound = useCallback((foundStations: Station[]) => {
     setStations(foundStations);
-  }, []); // The dependency array is empty because setStations is a stable function.
+  }, []); // The dependency array is empty because setStations is a stable function from useState.
 
   if (loading || (!user && !isGuest) || !userVehicle) {
     return (
