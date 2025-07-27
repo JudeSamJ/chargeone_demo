@@ -95,8 +95,9 @@ export default function MapView({
     if (directions && mapRef.current && directions.routes && directions.routes.length > 0) {
         const bounds = new google.maps.LatLngBounds();
         directions.routes[0].legs.forEach((leg: any) => {
-            if (leg.start_location) bounds.extend(leg.start_location);
-            if (leg.end_location) bounds.extend(leg.end_location);
+            leg.steps.forEach((step: any) => {
+                step.path.forEach((p: any) => bounds.extend(p));
+            });
         });
         mapRef.current.fitBounds(bounds);
     }
@@ -151,7 +152,7 @@ export default function MapView({
                         options={{
                             suppressMarkers: true,
                             polylineOptions: {
-                                strokeColor: '#1976D2',
+                                strokeColor: '#0000FF',
                                 strokeWeight: 6,
                             }
                         }}
@@ -179,7 +180,8 @@ export default function MapView({
                             onClick={() => onSelectStation(station)}
                             title={station.name}
                             icon={{
-                                url: 'http://maps.google.com/mapfiles/ms/icons/green-dot.png'
+                                url: 'https://maps.google.com/mapfiles/ms/icons/green-dot.png',
+                                scaledSize: new window.google.maps.Size(40, 40)
                             }}
                         />
                     ))}
