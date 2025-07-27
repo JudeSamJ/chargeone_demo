@@ -44,7 +44,8 @@ const findStationsFlow = ai.defineFlow(
         location: p.vicinity, 
         vicinity: p.vicinity,
         distance: 0, 
-        power: 50,
+        // Simulate different power levels for stations
+        power: [50, 75, 150, 350][Math.floor(Math.random() * 4)],
         pricePerKwh: 18.50,
         connectors: ['CCS'],
         status: status,
@@ -58,6 +59,13 @@ const findStationsFlow = ai.defineFlow(
         return StationSchema.safeParse(station).success;
     });
     
+    // Sort stations: available first, then by power (descending)
+    stations.sort((a, b) => {
+        if (a.status === 'available' && b.status !== 'available') return -1;
+        if (a.status !== 'available' && b.status === 'available') return 1;
+        return b.power - a.power;
+    });
+
     return stations;
   }
 );

@@ -36,6 +36,7 @@ export default function MapView({ onStationsFound, stations, onStationClick, rou
 
     const [center, setCenter] = useState(defaultCenter);
     const [currentLocation, setCurrentLocation] = useState<google.maps.LatLngLiteral | null>(null);
+    const [destinationLocation, setDestinationLocation] = useState<google.maps.LatLngLiteral | null>(null);
     const { toast } = useToast();
     const mapRef = useRef<google.maps.Map | null>(null);
     const { theme } = useTheme();
@@ -84,19 +85,32 @@ export default function MapView({ onStationsFound, stations, onStationClick, rou
     useEffect(() => {
         if (route && mapRef.current) {
             const bounds = new google.maps.LatLngBounds();
+            const routeLeg = route.routes[0]?.legs[0];
+
+            if (routeLeg?.end_location) {
+                setDestinationLocation({
+                    lat: routeLeg.end_location.lat(),
+                    lng: routeLeg.end_location.lng(),
+                });
+            } else {
+                setDestinationLocation(null);
+            }
+
             if (route.routes[0]?.bounds) {
                 const routeBounds = route.routes[0].bounds;
-                const ne = routeBounds.northeast;
-                const sw = routeBounds.southwest;
+                const ne = routeBounds.getNorthEast();
+                const sw = routeBounds.getSouthWest();
                 const newBounds = new google.maps.LatLngBounds(
-                    new google.maps.LatLng(sw.lat, sw.lng),
-                    new google.maps.LatLng(ne.lat, ne.lng)
+                    new google.maps.LatLng(sw.lat(), sw.lng()),
+                    new google.maps.LatLng(ne.lat(), ne.lng())
                 );
                 bounds.union(newBounds);
             }
             if (!bounds.isEmpty()) {
               mapRef.current.fitBounds(bounds);
             }
+        } else {
+            setDestinationLocation(null);
         }
     }, [route]);
 
@@ -132,7 +146,7 @@ export default function MapView({ onStationsFound, stations, onStationClick, rou
         >
             {isLoaded && (
               <>
-                {currentLocation && (
+                {currentLocation && !route && (
                   <MarkerF
                       position={currentLocation}
                       title="Your Location"
@@ -151,7 +165,7 @@ export default function MapView({ onStationsFound, stations, onStationClick, rou
                     <MarkerF
                         key={station.id}
                         position={{ lat: station.lat, lng: station.lng }}
-                        title={station.name}
+                        title={`${station.name} (${station.power}kW)`}
                         onClick={() => onStationClick(station)}
                         icon={{
                             path: google.maps.SymbolPath.CIRCLE,
@@ -168,13 +182,28 @@ export default function MapView({ onStationsFound, stations, onStationClick, rou
                   <DirectionsRenderer
                       directions={route}
                       options={{
-                          suppressMarkers: true,
+                          suppressMarkers: true, // We render our own markers
                           polylineOptions: {
                               strokeColor: '#4285F4',
                               strokeWeight: 6,
                           }
                       }}
                   />
+                )}
+                
+                {destinationLocation && (
+                    <MarkerF
+                        position={destinationLocation}
+                        title="Destination"
+                        icon={{
+                            path: google.maps.SymbolPath.FILLED_STAR,
+                            fillColor: '#FBBF24', // Amber
+                            fillOpacity: 1,
+                            strokeColor: '#ffffff',
+                            strokeWeight: 2,
+                            scale: 12,
+                        }}
+                    />
                 )}
               </>
             )}

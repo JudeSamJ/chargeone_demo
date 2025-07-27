@@ -45,7 +45,8 @@ const planRouteFlow = ai.defineFlow(
     const leg = route.legs[0];
     
     // Simplified range: uses 1kWh for 5km as a rough estimate
-    const vehicleMaxRangeKm = vehicle.batteryCapacity * 5;
+    const vehicleMaxRangeKm = vehicle.batteryCapacity * 5; 
+    const safetyBufferKm = 50; // Leave a 50km buffer
     let currentChargeKm = vehicleMaxRangeKm * (vehicle.currentCharge / 100);
     
     const requiredStations: Station[] = [];
@@ -61,9 +62,9 @@ const planRouteFlow = ai.defineFlow(
     for (const step of leg.steps) {
         const stepDistanceKm = (step.distance?.value || 0) / 1000;
         
-        // Check if we can complete the next step
-        if (currentChargeKm < stepDistanceKm) {
-            // Can't make it to the end of this step, need to charge now.
+        // Check if we can complete the next step with our buffer
+        if (currentChargeKm < stepDistanceKm + safetyBufferKm) {
+            // Can't make it to the end of this step with a safe buffer, need to charge.
             const searchPoint = step.start_location;
             
             const nearbyStations = await findStations({
@@ -72,16 +73,19 @@ const planRouteFlow = ai.defineFlow(
                 radius: 50000, // 50km search radius
             });
             
-            const availableStation = nearbyStations.find(s => s.status === 'available');
+            // Get the top 3-5 best available stations
+            const bestStations = nearbyStations
+              .filter(s => s.status === 'available')
+              .slice(0, 3);
 
-            if (availableStation) {
-                requiredStations.push(availableStation);
-                // Simulate a full recharge
+            if (bestStations.length > 0) {
+                requiredStations.push(...bestStations);
+                // Simulate a full recharge after finding stations
                 currentChargeKm = vehicleMaxRangeKm;
             } else {
                 // Could not find an available station. For now, we'll just continue,
                 // but a real app might alert the user or try a wider search.
-                console.warn("Could not find an available charging station near", searchPoint);
+                console.warn("Could not find any available charging stations near", searchPoint);
             }
         }
         
