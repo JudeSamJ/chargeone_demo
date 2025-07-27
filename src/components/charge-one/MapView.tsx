@@ -40,7 +40,6 @@ export default function MapView({
   
   const [stations, setStations] = useState<Station[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [currentDirections, setCurrentDirections] = useState<any>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -64,7 +63,7 @@ export default function MapView({
         clearTimeout(searchTimeoutRef.current);
     }
     searchTimeoutRef.current = setTimeout(() => {
-        if (mapRef.current && !currentDirections) { 
+        if (mapRef.current && !directions) { 
             const newCenter = mapRef.current.getCenter();
             if (newCenter) {
                 const newCenterCoords = { lat: newCenter.lat(), lng: newCenter.lng() };
@@ -73,7 +72,7 @@ export default function MapView({
         }
     }, 500); 
     
-  }, [fetchStationsForCenter, currentDirections]);
+  }, [fetchStationsForCenter, directions]);
 
 
   const onLoad = useCallback(function callback(map: google.maps.Map) {
@@ -90,7 +89,6 @@ export default function MapView({
   }, []);
 
   useEffect(() => {
-    setCurrentDirections(directions);
     if (directions && mapRef.current && directions.routes && directions.routes.length > 0 && window.google) {
         const route = directions.routes[0];
         if (route.bounds) {
@@ -147,10 +145,10 @@ export default function MapView({
                     zoomControl: true,
                 }}
               >
-                {currentDirections && currentDirections.routes && currentDirections.routes.length > 0 ? (
+                {directions && directions.routes && directions.routes.length > 0 ? (
                     <>
                     <DirectionsRenderer
-                        directions={currentDirections} 
+                        directions={directions} 
                         options={{
                             suppressMarkers: true,
                             polylineOptions: {
@@ -159,9 +157,9 @@ export default function MapView({
                             }
                         }}
                     />
-                    {currentDirections.routes[0].legs[0].start_location && (
+                    {directions.routes[0].legs[0].start_location && (
                          <MarkerF 
-                            position={currentDirections.routes[0].legs[0].start_location}
+                            position={directions.routes[0].legs[0].start_location}
                             title="Your Location"
                             icon={{
                                 path: google.maps.SymbolPath.CIRCLE,
@@ -173,9 +171,9 @@ export default function MapView({
                             }}
                         />
                     )}
-                    {currentDirections.routes[0].legs[0].end_location && (
+                    {directions.routes[0].legs[0].end_location && (
                         <MarkerF 
-                            position={currentDirections.routes[0].legs[currentDirections.routes[0].legs.length - 1].end_location}
+                            position={directions.routes[0].legs[directions.routes[0].legs.length - 1].end_location}
                             title="Destination"
                         />
                     )}
