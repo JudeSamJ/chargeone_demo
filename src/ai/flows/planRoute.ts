@@ -75,6 +75,12 @@ const planRouteFlow = ai.defineFlow(
             errorMessage: 'Google Maps API key not configured on the server.',
         };
     }
+     if (!input.origin || !input.destination) {
+        return {
+            hasSufficientCharge: false,
+            errorMessage: 'Invalid origin or destination provided.',
+        };
+    }
     
     const getDirections = async (origin: string, destination: string, waypoints?: string) => {
         const url = new URL('https://maps.googleapis.com/maps/api/directions/json');
@@ -119,6 +125,13 @@ const planRouteFlow = ai.defineFlow(
         // Charge is not sufficient, find a charging station.
         const startCoords = leg.start_location; // { lat, lng }
         const endCoords = leg.end_location; // { lat, lng }
+        
+        if (!startCoords || !endCoords) {
+             return {
+                hasSufficientCharge: false,
+                errorMessage: "Could not calculate a valid path to find a charging station.",
+            };
+        }
         const midPoint = getMidpoint(startCoords, endCoords);
         
         const { output } = await routingPrompt({

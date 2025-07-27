@@ -131,15 +131,19 @@ function HomePageContent() {
   const handlePlanRoute = async (origin: string, destination: string) => {
     let startPoint = origin;
     if (!startPoint) {
-      if (!currentLocation) {
-        toast({ variant: "destructive", title: "Location unavailable", description: "Could not get your current location. Please enter a starting point." });
-        return;
-      }
-      startPoint = `${currentLocation.lat},${currentLocation.lng}`;
+        if (!currentLocation) {
+            toast({ 
+                variant: "destructive", 
+                title: "Location Unavailable", 
+                description: "Your current location isn't available yet. Please enter a starting point or wait a moment." 
+            });
+            return;
+        }
+        startPoint = `${currentLocation.lat},${currentLocation.lng}`;
     }
 
     if (!destination) {
-        toast({ variant: "destructive", title: "Destination required", description: "Please enter a destination." });
+        toast({ variant: "destructive", title: "Destination Required", description: "Please enter a destination." });
         return;
     }
     
@@ -165,7 +169,8 @@ function HomePageContent() {
                 toast({ 
                   variant: result.hasSufficientCharge ? 'default' : 'destructive', 
                   title: result.hasSufficientCharge ? "Route Planned" : "Charging Stop Required", 
-                  description: result.errorMessage
+                  description: result.errorMessage,
+                  duration: 5000,
                 });
             }
         }
