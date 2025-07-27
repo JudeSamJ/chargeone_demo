@@ -1,8 +1,9 @@
 "use client";
 
-import { GoogleMap, useJsApiLoader, MarkerF } from '@react-google-maps/api';
+import { GoogleMap, MarkerF } from '@react-google-maps/api';
 import type { Station } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useState, useEffect } from 'react';
 
 interface MapViewProps {
     stations: Station[];
@@ -21,35 +22,14 @@ const center = {
   lng: -118.2437
 };
 
-// --- THIS IS A TEMPORARY FIX ---
-// For a real application, use environment variables:
-// const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "";
-const apiKey = "PASTE_YOUR_GOOGLE_MAPS_API_KEY_HERE";
-
-
 export default function MapView({ stations, onSelectStation, selectedStationId }: MapViewProps) {
-  const { isLoaded, loadError } = useJsApiLoader({
-    id: 'google-map-script',
-    googleMapsApiKey: apiKey
-  })
+  const [isClient, setIsClient] = useState(false);
 
-  if (loadError || apiKey === "PASTE_YOUR_GOOGLE_MAPS_API_KEY_HERE") {
-    return (
-        <Card>
-            <CardHeader>
-                <CardTitle>Nearby Stations Map</CardTitle>
-            </CardHeader>
-            <CardContent>
-                <div style={containerStyle} className="bg-destructive/20 text-destructive border border-destructive rounded-lg flex flex-col items-center justify-center text-center p-4">
-                    <p className="font-medium">Map Error</p>
-                    <p className="text-sm">Could not load Google Maps. Please ensure you have a valid API key and have enabled the Maps JavaScript API in the Google Cloud Console. Paste your key directly into the `MapView.tsx` file.</p>
-                </div>
-            </CardContent>
-        </Card>
-    );
-  }
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
-  if (!isLoaded) {
+  if (!isClient) {
     return (
         <Card>
             <CardHeader>
@@ -61,8 +41,26 @@ export default function MapView({ stations, onSelectStation, selectedStationId }
                 </div>
             </CardContent>
         </Card>
-    )
+    );
   }
+  
+  // A simple check to see if the Google Maps script is loaded.
+  if (typeof window !== 'undefined' && !window.google) {
+     return (
+        <Card>
+            <CardHeader>
+                <CardTitle>Nearby Stations Map</CardTitle>
+            </CardHeader>
+            <CardContent>
+                <div style={containerStyle} className="bg-destructive/20 text-destructive border border-destructive rounded-lg flex flex-col items-center justify-center text-center p-4">
+                    <p className="font-medium">Map Error</p>
+                    <p className="text-sm">Could not load Google Maps. Please ensure you have pasted a valid API key into `src/app/layout.tsx` and that the Maps JavaScript API is enabled in your Google Cloud Console.</p>
+                </div>
+            </CardContent>
+        </Card>
+    );
+  }
+
 
   return (
     <Card>
