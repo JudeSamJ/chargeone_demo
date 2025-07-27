@@ -27,6 +27,8 @@ function HomePageContent() {
   const [isPlanningRoute, setIsPlanningRoute] = useState(false);
   const [currentLocation, setCurrentLocation] = useState<{lat: number, lng: number} | null>(null);
   const [chargingStop, setChargingStop] = useState<Station | null>(null);
+  const [locationError, setLocationError] = useState<string | null>(null);
+
 
   const { toast } = useToast();
   const { user, loading } = useAuth();
@@ -38,19 +40,36 @@ function HomePageContent() {
     if (!loading && !user && !isGuest) {
       router.push('/login');
     }
+  }, [user, loading, router, isGuest]);
+
+  useEffect(() => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(position => {
         setCurrentLocation({
           lat: position.coords.latitude,
           lng: position.coords.longitude
         });
-      }, () => {
-        setCurrentLocation({ lat: 11.1271, lng: 78.6569 }); 
+        setLocationError(null);
+      }, (error) => {
+        console.error("Geolocation error:", error);
+        setLocationError("Could not get your location. Please enable location services. Using a default location.");
+        setCurrentLocation({ lat: 11.1271, lng: 78.6569 }); // Fallback to Tamil Nadu
       });
     } else {
+      setLocationError("Geolocation is not supported by this browser. Using a default location.");
       setCurrentLocation({ lat: 11.1271, lng: 78.6569 });
     }
-  }, [user, loading, router, isGuest]);
+  }, []);
+
+  useEffect(() => {
+    if (locationError) {
+      toast({
+        variant: "destructive",
+        title: "Location Error",
+        description: locationError,
+      })
+    }
+  }, [locationError, toast]);
 
 
   const handleSelectStation = (station: Station) => {
@@ -137,16 +156,16 @@ function HomePageContent() {
             if (result.chargingStop) {
                 setChargingStop(result.chargingStop);
             }
-            if (!result.hasSufficientCharge) {
+            if (result.errorMessage) {
                 toast({ 
-                  variant: 'default', 
-                  title: "Charging Stop Required", 
-                  description: result.errorMessage || "Your vehicle requires a charging stop to complete this trip." 
+                  variant: result.hasSufficientCharge ? 'default' : 'destructive', 
+                  title: result.hasSufficientCharge ? "Route Planned" : "Charging Stop Required", 
+                  description: result.errorMessage
                 });
             }
         }
-    } catch(e) {
-        toast({ variant: 'destructive', title: "Error", description: "Failed to plan route." });
+    } catch(e: any) {
+        toast({ variant: 'destructive', title: "Error", description: e.message || "Failed to plan route." });
     } finally {
         setIsPlanningRoute(false);
     }

@@ -125,13 +125,20 @@ const planRouteFlow = ai.defineFlow(
         const endCoords = leg.end_location; // { lat, lng }
         const midPoint = getMidpoint(startCoords, endCoords);
         
-        const llmResponse = await routingPrompt({
+        const { output } = await routingPrompt({
             distanceKm,
             usableRangeKm,
             midpoint: midPoint,
         });
         
-        const chargingStop = llmResponse.output;
+        if (!output) {
+             return {
+                hasSufficientCharge: false,
+                directions: initialDirections,
+                errorMessage: "Your vehicle doesn't have enough charge, and we couldn't find a suitable charging station on the route."
+            }
+        }
+        const chargingStop = output;
         
         if (!chargingStop || !chargingStop.lat || !chargingStop.lng) {
              return {
@@ -142,6 +149,14 @@ const planRouteFlow = ai.defineFlow(
         }
         
         const finalDirections = await getDirections(originStr, input.destination, `via:${chargingStop.lat},${chargingStop.lng}`);
+
+        if (finalDirections.status !== 'OK') {
+             return {
+                hasSufficientCharge: false,
+                directions: initialDirections, // Return original route
+                errorMessage: `A charge is needed, but we failed to plot a new route through a station. Error: ${finalDirections.status}`
+            }
+        }
 
         return {
             hasSufficientCharge: false,
