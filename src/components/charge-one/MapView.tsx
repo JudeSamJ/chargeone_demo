@@ -1,3 +1,4 @@
+
 "use client";
 
 import { GoogleMap, MarkerF, useJsApiLoader, DirectionsRenderer } from '@react-google-maps/api';
@@ -156,6 +157,18 @@ export default function MapView({
                                 strokeColor: '#1976D2',
                                 strokeWeight: 6,
                             }
+                        }}
+                    />
+                    <MarkerF 
+                        position={initialCenter} 
+                        title="Your Location"
+                        icon={{
+                            path: google.maps.SymbolPath.CIRCLE,
+                            scale: 8,
+                            fillColor: "#4285F4",
+                            fillOpacity: 1,
+                            strokeWeight: 2,
+                            strokeColor: "white",
                         }}
                     />
                     {chargingStop && (
