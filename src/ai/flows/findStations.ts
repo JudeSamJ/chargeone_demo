@@ -1,7 +1,8 @@
 'use server';
 /**
- * @fileOverview A flow to find nearby EV charging stations using the Google Places API.
+ * @fileOverview A tool to find nearby EV charging stations using the Google Places API.
  *
+ * - findStationsTool - A Genkit tool that fetches station data.
  * - findStations - A function that fetches station data.
  * - FindStationsInput - The input type for the findStations function.
  * - Station[] - The return type for the findStations function.
@@ -14,6 +15,7 @@ import type { Station } from '@/lib/types';
 const FindStationsInputSchema = z.object({
   lat: z.number().describe('Latitude of the center point for the search.'),
   lng: z.number().describe('Longitude of the center point for the search.'),
+  radius: z.number().optional().describe('Search radius in meters. Defaults to 50000.'),
 });
 
 export type FindStationsInput = z.infer<typeof FindStationsInputSchema>;
@@ -22,14 +24,14 @@ export type FindStationsInput = z.infer<typeof FindStationsInputSchema>;
 // In a production app, this should be handled more securely.
 const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
 
-async function fetchStations(input: FindStationsInput): Promise<Station[]> {
+export async function findStations(input: FindStationsInput): Promise<Station[]> {
   if (!GOOGLE_MAPS_API_KEY) {
     throw new Error('Google Maps API key is not configured.');
   }
 
   const url = new URL('https://maps.googleapis.com/maps/api/place/nearbysearch/json');
   url.searchParams.append('location', `${input.lat},${input.lng}`);
-  url.searchParams.append('radius', '50000'); // 50km radius
+  url.searchParams.append('radius', (input.radius || 50000).toString());
   url.searchParams.append('keyword', 'ev charging station');
   url.searchParams.append('key', GOOGLE_MAPS_API_KEY);
 
@@ -70,17 +72,14 @@ async function fetchStations(input: FindStationsInput): Promise<Station[]> {
   }
 }
 
-const findStationsFlow = ai.defineFlow(
+export const findStationsTool = ai.defineTool(
   {
-    name: 'findStationsFlow',
+    name: 'findStationsTool',
+    description: 'Finds EV charging stations near a given latitude and longitude.',
     inputSchema: FindStationsInputSchema,
     outputSchema: z.array(z.any()),
   },
   async (input) => {
-    return fetchStations(input);
+    return findStations(input);
   }
 );
-
-export async function findStations(input: FindStationsInput): Promise<Station[]> {
-    return findStationsFlow(input);
-}

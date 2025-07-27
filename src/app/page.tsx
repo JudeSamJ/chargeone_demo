@@ -1,13 +1,14 @@
 "use client";
 
 import { useState, Suspense, useEffect } from 'react';
-import type { Station } from '@/lib/types';
+import type { Station, Vehicle } from '@/lib/types';
 import { userVehicle } from '@/lib/mock-data';
 import Header from '@/components/charge-one/Header';
 import WalletCard from '@/components/charge-one/WalletCard';
 import VehicleStatusCard from '@/components/charge-one/VehicleStatusCard';
 import MapView from '@/components/charge-one/MapView';
 import ChargingSession from '@/components/charge-one/ChargingSession';
+import RoutePlanner from '@/components/charge-one/RoutePlanner';
 import { Toaster } from '@/components/ui/toaster';
 import { useToast } from '@/hooks/use-toast';
 import RechargeDialog from '@/components/charge-one/RechargeDialog';
@@ -15,13 +16,17 @@ import { useAuth } from '@/hooks/useAuth';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Skeleton } from '@/components/ui/skeleton';
 import { rechargeWallet } from '@/ai/flows/rechargeWallet';
-import { findStations } from '@/ai/flows/findStations';
+import { planRoute } from '@/ai/flows/planRoute';
 
 function HomePageContent() {
   const [stations, setStations] = useState<Station[]>([]);
   const [selectedStation, setSelectedStation] = useState<Station | null>(null);
   const [walletBalance, setWalletBalance] = useState(0);
   const [isRechargeOpen, setIsRechargeOpen] = useState(false);
+  const [directions, setDirections] = useState<any>(null);
+  const [isPlanningRoute, setIsPlanningRoute] = useState(false);
+  const [currentLocation, setCurrentLocation] = useState<{lat: number, lng: number} | null>(null);
+
   const { toast } = useToast();
   const { user, loading } = useAuth();
   const router = useRouter();
@@ -31,6 +36,20 @@ function HomePageContent() {
   useEffect(() => {
     if (!loading && !user && !isGuest) {
       router.push('/login');
+    }
+    // Get user's current location
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(position => {
+        setCurrentLocation({
+          lat: position.coords.latitude,
+          lng: position.coords.longitude
+        });
+      }, () => {
+        // Fallback to a default location if user denies permission
+        setCurrentLocation({ lat: 11.1271, lng: 78.6569 }); 
+      });
+    } else {
+      setCurrentLocation({ lat: 11.1271, lng: 78.6569 });
     }
   }, [user, loading, router, isGuest]);
 
@@ -90,8 +109,44 @@ function HomePageContent() {
         });
     }
   }
+
+  const handlePlanRoute = async (destination: string) => {
+    if (!currentLocation) {
+        toast({ variant: "destructive", title: "Location unavailable", description: "Could not get your current location." });
+        return;
+    }
+    if (!destination) {
+        toast({ variant: "destructive", title: "Destination required", description: "Please enter a destination." });
+        return;
+    }
+    
+    setIsPlanningRoute(true);
+    setDirections(null);
+    
+    try {
+        const result = await planRoute({
+            origin: currentLocation,
+            destination,
+            vehicle: userVehicle,
+        });
+
+        if (result.errorMessage) {
+            toast({ variant: 'destructive', title: "Route Planning Error", description: result.errorMessage });
+        }
+        if (result.directions) {
+            setDirections(result.directions);
+            if (!result.hasSufficientCharge) {
+                toast({ variant: 'default', title: "Charging Stop Added", description: "Your vehicle requires a charging stop to complete this trip." });
+            }
+        }
+    } catch(e) {
+        toast({ variant: 'destructive', title: "Error", description: "Failed to plan route." });
+    } finally {
+        setIsPlanningRoute(false);
+    }
+  }
   
-  if (loading || (!user && !isGuest)) {
+  if (loading || (!user && !isGuest) || !currentLocation) {
     return (
         <div className="min-h-screen bg-background p-4 sm:p-6 lg:p-8">
              <Header />
@@ -119,19 +174,24 @@ function HomePageContent() {
           <div className="lg:col-span-2 flex flex-col gap-8">
             <WalletCard balance={walletBalance} onRecharge={() => setIsRechargeOpen(true)} />
             <VehicleStatusCard vehicle={userVehicle} />
+            <RoutePlanner onPlanRoute={handlePlanRoute} isPlanning={isPlanningRoute} />
+            {selectedStation && (
+                <ChargingSession
+                station={selectedStation}
+                onEndSession={handleEndSession}
+                onClearSelection={handleClearSelection}
+                vehicle={userVehicle}
+                />
+            )}
+          </div>
+          <div className="lg:col-span-3">
             <MapView 
               stations={stations}
               onStationsLoaded={setStations}
               onSelectStation={handleSelectStation}
               selectedStationId={selectedStation?.id}
-            />
-          </div>
-          <div className="lg:col-span-3">
-            <ChargingSession
-              station={selectedStation}
-              onEndSession={handleEndSession}
-              onClearSelection={handleClearSelection}
-              vehicle={userVehicle}
+              initialCenter={currentLocation}
+              directions={directions}
             />
           </div>
         </div>

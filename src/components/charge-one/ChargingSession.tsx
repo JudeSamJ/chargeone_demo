@@ -79,17 +79,9 @@ export default function ChargingSession({ station, vehicle, onEndSession, onClea
   };
 
   if (!station) {
-    return (
-      <Card className="h-full flex flex-col items-center justify-center min-h-[400px]">
-        <CardContent className="text-center">
-          <Zap className="h-12 w-12 mx-auto text-muted-foreground" />
-          <h3 className="mt-4 text-lg font-medium">No Station Selected</h3>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Please select an available charging station to begin.
-          </p>
-        </CardContent>
-      </Card>
-    );
+    // This component now returns null if no station is selected,
+    // as the main page will conditionally render it.
+    return null;
   }
 
   if (sessionFinished) {
