@@ -72,21 +72,21 @@ export default function MapView({ stations, selectedStation, onStationSelect, on
         }
     }, [searchForStations]);
 
-    
-
-     useEffect(() => {
+    useEffect(() => {
         if (route && mapRef.current) {
             const bounds = new google.maps.LatLngBounds();
             route.routes[0].legs.forEach(leg => {
                 leg.steps.forEach(step => {
-                    if (step.path) {
+                    if (step.path) { // Check if path exists
                         step.path.forEach(path => {
                             bounds.extend(path);
                         })
                     }
                 })
             })
-            mapRef.current.fitBounds(bounds);
+            if (!bounds.isEmpty()) {
+              mapRef.current.fitBounds(bounds);
+            }
         }
     }, [route]);
 

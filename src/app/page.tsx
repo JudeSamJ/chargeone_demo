@@ -106,10 +106,8 @@ function HomePageContent() {
             vehicle: userVehicle
         });
         setRoute(result.route);
-        // If the route plan returns stations, display them. Otherwise, keep the existing ones.
-        if (result.chargingStations.length > 0) {
-            setStations(result.chargingStations);
-        }
+        // If the route plan returns stations, display them. Otherwise, clear existing ones.
+        setStations(result.chargingStations);
         setSelectedStation(null);
     } catch (error) {
         console.error("Failed to plan route:", error);

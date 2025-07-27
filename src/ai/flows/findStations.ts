@@ -32,7 +32,7 @@ const findStationsFlow = ai.defineFlow(
 
     // Get details for each place
     const detailedPlaces = await Promise.all(
-        places.map(place => getPlaceDetails(place.place_id))
+        places.filter(p => p.place_id).map(place => getPlaceDetails(place.place_id!))
     );
 
     // Format into our Station type
