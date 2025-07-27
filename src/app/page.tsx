@@ -109,6 +109,12 @@ function HomePageContent() {
     }
   };
 
+  const handleClearRoute = () => {
+    setRoute(null);
+    setStations([]);
+    setSelectedStation(null);
+  };
+
   const handleStationsFound = useCallback((foundStations: Station[]) => {
     setStations(foundStations);
   }, [setStations]);
@@ -138,6 +144,8 @@ function HomePageContent() {
         isRechargeOpen={isRechargeOpen}
         handleRecharge={handleRecharge}
         currentLocation={currentLocation}
+        hasRoute={!!route}
+        onClearRoute={handleClearRoute}
       />
       <MapView 
         onStationsFound={handleStationsFound} 

@@ -8,6 +8,8 @@ import ChargingSession from "./ChargingSession";
 import RoutePlanner from "./RoutePlanner";
 import RechargeDialog from "./RechargeDialog";
 import Header from "./Header";
+import { Button } from "../ui/button";
+import { X } from "lucide-react";
 
 interface ControlsProps {
     userVehicle: Vehicle;
@@ -21,6 +23,8 @@ interface ControlsProps {
     isRechargeOpen: boolean;
     handleRecharge: (amount: number) => void;
     currentLocation: google.maps.LatLngLiteral | null;
+    hasRoute: boolean;
+    onClearRoute: () => void;
 }
 
 export default function Controls({
@@ -35,6 +39,8 @@ export default function Controls({
     isRechargeOpen,
     handleRecharge,
     currentLocation,
+    hasRoute,
+    onClearRoute,
 }: ControlsProps) {
     return (
         <div className="absolute top-0 left-0 z-10 h-screen w-full max-w-md flex flex-col">
@@ -49,6 +55,14 @@ export default function Controls({
                         onClearSelection={() => handleStationSelect(null)}
                         vehicle={userVehicle}
                     />
+                ) : hasRoute ? (
+                     <div className="p-4 rounded-lg bg-card text-card-foreground shadow-sm text-center">
+                        <p className="font-medium">A route is active.</p>
+                        <p className="text-sm text-muted-foreground mb-4">Charging stations along your path are shown on the map.</p>
+                        <Button variant="outline" onClick={onClearRoute} className="w-full">
+                           <X className="mr-2 h-4 w-4" /> Clear Route
+                        </Button>
+                    </div>
                 ) : (
                     <RoutePlanner onPlanRoute={handlePlanRoute} isPlanning={isPlanningRoute} currentLocation={currentLocation}/>
                 )}

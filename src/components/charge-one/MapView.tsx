@@ -42,10 +42,27 @@ export default function MapView({ onStationsFound, stations, onStationClick, rou
     const mapRef = useRef<google.maps.Map | null>(null);
     const { theme } = useTheme();
     const stationsFetchedRef = useRef(false);
+    const [directionsRenderer, setDirectionsRenderer] = useState<google.maps.DirectionsRenderer | null>(null);
 
     const onMapLoad = useCallback((map: google.maps.Map) => {
         mapRef.current = map;
+        const renderer = new google.maps.DirectionsRenderer({
+            suppressMarkers: true,
+            polylineOptions: {
+                strokeColor: '#4285F4',
+                strokeWeight: 6,
+            }
+        });
+        renderer.setMap(map);
+        setDirectionsRenderer(renderer);
+
     }, []);
+
+    useEffect(() => {
+        if (directionsRenderer && route) {
+            directionsRenderer.setDirections(route);
+        }
+    }, [route, directionsRenderer]);
 
     useEffect(() => {
         if (!isLoaded) return;
@@ -62,7 +79,6 @@ export default function MapView({ onStationsFound, stations, onStationClick, rou
                     setCurrentLocation(currentPosition);
                     onLocationUpdate(currentPosition);
                     
-                    // Only pan to location if not actively viewing a route
                     if (!route) {
                         setCenter(currentPosition);
                         if(mapRef.current) {
@@ -70,7 +86,6 @@ export default function MapView({ onStationsFound, stations, onStationClick, rou
                         }
                     }
 
-                    // Fetch initial stations only once
                     if (!stationsFetchedRef.current) {
                         stationsFetchedRef.current = true;
                         findStations({ latitude: currentPosition.lat, longitude: currentPosition.lng, radius: 10000 })
@@ -149,8 +164,11 @@ export default function MapView({ onStationsFound, stations, onStationClick, rou
             }
         } else {
             setDestinationLocation(null);
+            if (directionsRenderer) {
+                directionsRenderer.setDirections(null);
+            }
         }
-    }, [route, isLoaded]);
+    }, [route, isLoaded, directionsRenderer]);
 
     const getStationMarkerIcon = (status: Station['status']) => {
         let color = '#808080'; // Grey for unavailable
@@ -213,19 +231,6 @@ export default function MapView({ onStationsFound, stations, onStationClick, rou
                         icon={getStationMarkerIcon(station.status)}
                     />
                 ))}
-
-                {route && (
-                  <DirectionsRenderer
-                      directions={route}
-                      options={{
-                          suppressMarkers: true, // We render our own markers
-                          polylineOptions: {
-                              strokeColor: '#4285F4',
-                              strokeWeight: 6,
-                          }
-                      }}
-                  />
-                )}
                 
                 {destinationLocation && (
                     <MarkerF
