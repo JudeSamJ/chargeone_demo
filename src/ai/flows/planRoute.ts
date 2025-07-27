@@ -59,28 +59,35 @@ const planRouteFlow = ai.defineFlow(
       };
     }
     
-    // 3. Find charging stations along the route (simplified)
-    // In a real app, you'd find stations at intervals along the polyline.
-    // Here, we just find stations near the midpoint for demonstration.
-    const midPointIndex = Math.floor((leg.steps?.length || 0) / 2);
-    if(!leg.steps || !leg.steps[midPointIndex]){
-      // Not enough steps in route to find a midpoint, return route without stations
-       return {
-        route: directionsResult,
-        chargingStations: [],
-      };
+    // 3. Find charging stations along the route
+    const allStations: Station[] = [];
+    const stationIds = new Set<string>();
+
+    if (leg.steps && leg.steps.length > 0) {
+        // Search for stations every 5 steps or so to avoid too many API calls
+        for (let i = 0; i < leg.steps.length; i += 5) {
+            const step = leg.steps[i];
+            const searchPoint = step.end_location;
+            
+            const foundStations = await findStations({
+                latitude: searchPoint.lat,
+                longitude: searchPoint.lng,
+                radius: 20000 // 20km search radius
+            });
+
+            foundStations.forEach(station => {
+                if (!stationIds.has(station.id)) {
+                    allStations.push(station);
+                    stationIds.add(station.id);
+                }
+            });
+        }
     }
-    const midPoint = leg.steps[midPointIndex].end_location;
-    
-    const chargingStations = await findStations({
-        latitude: midPoint.lat,
-        longitude: midPoint.lng,
-        radius: 20000 // 20km search radius from midpoint
-    });
+
 
     return {
       route: directionsResult,
-      chargingStations: chargingStations,
+      chargingStations: allStations,
     };
   }
 );
