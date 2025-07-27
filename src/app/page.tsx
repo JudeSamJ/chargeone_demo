@@ -54,7 +54,10 @@ function HomePageContent() {
   
   const handleStationSelect = (station: Station | null) => {
     setSelectedStation(station);
-    setRoute(null);
+    // Do not clear the route when selecting a station on it
+    if (route === null) {
+      setRoute(null);
+    }
   };
 
   const handleEndSession = (cost: number) => {
@@ -99,6 +102,9 @@ function HomePageContent() {
         return;
     }
     setIsPlanningRoute(true);
+    setRoute(null);
+    setStations([]);
+    setSelectedStation(null);
     try {
         const result = await planRoute({
             origin,
@@ -106,7 +112,6 @@ function HomePageContent() {
             vehicle: userVehicle
         });
         setRoute(result.route);
-        // If the route plan returns stations, display them. Otherwise, clear existing ones.
         setStations(result.chargingStations);
         setSelectedStation(null);
     } catch (error) {
@@ -118,6 +123,7 @@ function HomePageContent() {
   };
 
   const onStationsFound = useCallback((foundStations: Station[]) => {
+    setRoute(null);
     setStations(foundStations);
   }, []);
 

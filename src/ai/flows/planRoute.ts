@@ -48,7 +48,8 @@ const planRouteFlow = ai.defineFlow(
     const distanceKm = distanceMeters / 1000;
 
     // 2. Determine if charging is needed
-    const vehicleRangeKm = (vehicle.batteryCapacity * (vehicle.currentCharge / 100)); // Simplified range calculation
+    // Simplified range: uses 1kWh for 5km as a rough estimate
+    const vehicleRangeKm = vehicle.batteryCapacity * 5 * (vehicle.currentCharge / 100); 
 
     if (distanceKm <= vehicleRangeKm) {
       // No charging needed for this trip
@@ -61,12 +62,19 @@ const planRouteFlow = ai.defineFlow(
     // 3. Find charging stations along the route (simplified)
     // In a real app, you'd find stations at intervals along the polyline.
     // Here, we just find stations near the midpoint for demonstration.
-    const midPointIndex = Math.floor(leg.steps.length / 2);
+    const midPointIndex = Math.floor((leg.steps?.length || 0) / 2);
+    if(!leg.steps || !leg.steps[midPointIndex]){
+      // Not enough steps in route to find a midpoint, return route without stations
+       return {
+        route: directionsResult,
+        chargingStations: [],
+      };
+    }
     const midPoint = leg.steps[midPointIndex].end_location;
     
     const chargingStations = await findStations({
-        latitude: midPoint.lat,
-        longitude: midPoint.lng,
+        latitude: midPoint.lat(), // .lat() is a function
+        longitude: midPoint.lng(), // .lng() is a function
         radius: 20000 // 20km search radius from midpoint
     });
 

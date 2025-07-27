@@ -5,8 +5,9 @@
  */
 
 import { ai } from '@/ai/genkit';
-import { Station, FindStationsInputSchema, FindStationsOutputSchema, FindStationsInput } from '@/lib/types';
+import { Station, FindStationsInputSchema, FindStationsOutputSchema, FindStationsInput, StationSchema } from '@/lib/types';
 import { findPlace, getPlaceDetails } from '@/lib/google-maps';
+import { z } from 'genkit';
 
 export async function findStations(input: FindStationsInput): Promise<Station[]> {
   return findStationsFlow(input);
@@ -36,7 +37,7 @@ const findStationsFlow = ai.defineFlow(
     );
 
     // Format into our Station type
-    const stations: Station[] = detailedPlaces.filter(p => p).map((p: any) => ({
+    const stations: Station[] = detailedPlaces.filter(p => p && p.geometry).map((p: any) => ({
       id: p.place_id,
       name: p.name,
       location: p.vicinity,
@@ -48,7 +49,8 @@ const findStationsFlow = ai.defineFlow(
       lat: p.geometry.location.lat,
       lng: p.geometry.location.lng,
     }));
-
-    return stations;
+    
+    // Filter out any stations that don't conform to the schema after mapping
+    return stations.filter(station => StationSchema.safeParse(station).success);
   }
 );

@@ -35,6 +35,7 @@ export default function MapView({ stations, selectedStation, onStationSelect, on
     const [center, setCenter] = useState(defaultCenter);
 
     const searchForStations = useCallback(async (location: { lat: number, lng: number }) => {
+        if (route) return; // Do not search for nearby stations if a route is active
         try {
             const foundStations = await findStations({
                 latitude: location.lat,
@@ -45,7 +46,7 @@ export default function MapView({ stations, selectedStation, onStationSelect, on
         } catch(e) {
             console.error("Error finding stations", e);
         }
-    }, [onStationsFound]);
+    }, [onStationsFound, route]);
 
 
     const onMapLoad = useCallback((map: google.maps.Map) => {
