@@ -1,0 +1,64 @@
+
+'use server';
+/**
+ * @fileOverview A flow to find nearby charging stations.
+ */
+
+import { ai } from '@/ai/genkit';
+import { z } from 'genkit';
+import { Station } from '@/lib/types';
+import { findPlace, getPlaceDetails } from '@/lib/google-maps';
+
+export const FindStationsInputSchema = z.object({
+  latitude: z.number(),
+  longitude: z.number(),
+  radius: z.number().default(10000), // 10km
+});
+export type FindStationsInput = z.infer<typeof FindStationsInputSchema>;
+
+export const FindStationsOutputSchema = z.array(z.custom<Station>());
+
+export async function findStations(input: FindStationsInput): Promise<Station[]> {
+  return findStationsFlow(input);
+}
+
+const findStationsFlow = ai.defineFlow(
+  {
+    name: 'findStationsFlow',
+    inputSchema: FindStationsInputSchema,
+    outputSchema: FindStationsOutputSchema,
+  },
+  async ({ latitude, longitude, radius }) => {
+    
+    const places = await findPlace({
+        query: 'EV charging station',
+        location: { lat: latitude, lng: longitude },
+        radius
+    });
+
+    if (!places || places.length === 0) {
+        return [];
+    }
+
+    // Get details for each place
+    const detailedPlaces = await Promise.all(
+        places.map(place => getPlaceDetails(place.place_id))
+    );
+
+    // Format into our Station type
+    const stations: Station[] = detailedPlaces.filter(p => p).map((p: any) => ({
+      id: p.place_id,
+      name: p.name,
+      location: p.vicinity,
+      distance: 0, // This would need to be calculated separately if needed
+      power: 50, // Placeholder
+      pricePerKwh: 18.50, // Placeholder
+      connectors: ['CCS'], // Placeholder
+      isAvailable: p.opening_hours?.open_now || false,
+      lat: p.geometry.location.lat,
+      lng: p.geometry.location.lng,
+    }));
+
+    return stations;
+  }
+);

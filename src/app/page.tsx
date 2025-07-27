@@ -7,6 +7,7 @@ import { defaultVehicle, vehicles } from '@/lib/mock-data';
 import Header from '@/components/charge-one/Header';
 import WalletCard from '@/components/charge-one/WalletCard';
 import VehicleStatusCard from '@/components/charge-one/VehicleStatusCard';
+import MapView from '@/components/charge-one/MapView';
 import ChargingSession from '@/components/charge-one/ChargingSession';
 import { Toaster } from '@/components/ui/toaster';
 import { useToast } from '@/hooks/use-toast';
@@ -15,13 +16,16 @@ import { useAuth } from '@/hooks/useAuth';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Skeleton } from '@/components/ui/skeleton';
 import { rechargeWallet } from '@/ai/flows/rechargeWallet';
+import RoutePlanner from '@/components/charge-one/RoutePlanner';
+import { planRoute } from '@/ai/flows/planRoute';
 
 function HomePageContent() {
+  const [stations, setStations] = useState<Station[]>([]);
   const [selectedStation, setSelectedStation] = useState<Station | null>(null);
   const [walletBalance, setWalletBalance] = useState(0);
   const [isRechargeOpen, setIsRechargeOpen] = useState(false);
   const [userVehicle, setUserVehicle] = useState<Vehicle | null>(null);
-
+  const [route, setRoute] = useState<google.maps.DirectionsResult | null>(null);
 
   const { toast } = useToast();
   const { user, loading } = useAuth();
@@ -49,6 +53,11 @@ function HomePageContent() {
       }
     }
   }, [user, loading, router, isGuest]);
+  
+  const handleStationSelect = (station: Station | null) => {
+    setSelectedStation(station);
+    setRoute(null);
+  };
 
   const handleEndSession = (cost: number) => {
     setWalletBalance((prev) => prev - cost);
@@ -57,6 +66,7 @@ function HomePageContent() {
   
   const handleClearSelection = () => {
     setSelectedStation(null);
+    setRoute(null);
   }
 
   const handleRecharge = async (amount: number) => {
@@ -85,18 +95,39 @@ function HomePageContent() {
     }
   }
 
+  const handlePlanRoute = async (origin: string, destination: string) => {
+    if (!userVehicle) {
+        toast({ variant: 'destructive', title: 'Please select a vehicle first.' });
+        return;
+    }
+    try {
+        const result = await planRoute({
+            origin,
+            destination,
+            vehicle: userVehicle
+        });
+        setRoute(result.route);
+        setStations(result.chargingStations);
+        setSelectedStation(null);
+    } catch (error) {
+        console.error("Failed to plan route:", error);
+        toast({ variant: 'destructive', title: 'Failed to plan route.' });
+    }
+  };
+
   if (loading || (!user && !isGuest) || !userVehicle) {
     return (
         <div className="min-h-screen bg-background">
              <Header />
             <main className="p-4 sm:p-6 lg:p-8">
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 max-w-4xl mx-auto">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
                     <div className="lg:col-span-1 flex flex-col gap-8">
                         <Skeleton className="h-48 w-full" />
                         <Skeleton className="h-40 w-full" />
+                        <Skeleton className="h-64 w-full" />
                     </div>
                     <div className="lg:col-span-2">
-                         <Skeleton className="h-[400px] w-full" />
+                         <Skeleton className="h-[600px] w-full" />
                     </div>
                 </div>
             </main>
@@ -108,25 +139,30 @@ function HomePageContent() {
     <div className="min-h-screen bg-background text-foreground">
       <Header />
       <main className="p-4 sm:p-6 lg:p-8">
-        <div className="max-w-4xl mx-auto space-y-8">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
+          <div className="lg:col-span-1 flex flex-col gap-8">
             <WalletCard balance={walletBalance} onRecharge={() => setIsRechargeOpen(true)} />
             <VehicleStatusCard vehicle={userVehicle} />
-          </div>
-            {selectedStation && (
-                <ChargingSession
+            {selectedStation ? (
+              <ChargingSession
                 station={selectedStation}
                 onEndSession={handleEndSession}
                 onClearSelection={handleClearSelection}
                 vehicle={userVehicle}
-                />
+              />
+            ) : (
+                <RoutePlanner onPlanRoute={handlePlanRoute} />
             )}
-            {!selectedStation && (
-              <div className="text-center p-12 bg-muted rounded-lg">
-                <h2 className="text-2xl font-bold">Welcome to ChargeOne</h2>
-                <p className="text-muted-foreground mt-2">Map functionality is temporarily disabled. Please use the sidebar to manage your account.</p>
-              </div>
-            )}
+          </div>
+          <div className="lg:col-span-2">
+            <MapView 
+              stations={stations} 
+              onStationSelect={handleStationSelect} 
+              onStationsFound={setStations}
+              selectedStation={selectedStation}
+              route={route}
+            />
+          </div>
         </div>
       </main>
       <RechargeDialog 
