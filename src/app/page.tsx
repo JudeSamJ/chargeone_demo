@@ -128,11 +128,16 @@ function HomePageContent() {
     }
   }
 
-  const handlePlanRoute = async (destination: string) => {
-    if (!currentLocation) {
-        toast({ variant: "destructive", title: "Location unavailable", description: "Could not get your current location." });
+  const handlePlanRoute = async (origin: string, destination: string) => {
+    let startPoint = origin;
+    if (!startPoint) {
+      if (!currentLocation) {
+        toast({ variant: "destructive", title: "Location unavailable", description: "Could not get your current location. Please enter a starting point." });
         return;
+      }
+      startPoint = `${currentLocation.lat},${currentLocation.lng}`;
     }
+
     if (!destination) {
         toast({ variant: "destructive", title: "Destination required", description: "Please enter a destination." });
         return;
@@ -144,7 +149,7 @@ function HomePageContent() {
     
     try {
         const result = await planRoute({
-            origin: currentLocation,
+            origin: startPoint,
             destination,
             vehicle: userVehicle,
         });

@@ -15,10 +15,7 @@ import type { Vehicle, Station } from '@/lib/types';
 const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
 
 const PlanRouteInputSchema = z.object({
-    origin: z.object({
-        lat: z.number(),
-        lng: z.number(),
-    }),
+    origin: z.string().describe("The user's starting address or place."),
     destination: z.string().describe("The user's desired destination address or place."),
     vehicle: z.object({
         make: z.string(),
@@ -95,8 +92,7 @@ const planRouteFlow = ai.defineFlow(
     }
 
     try {
-        const originStr = `${input.origin.lat},${input.origin.lng}`;
-        const initialDirections = await getDirections(originStr, input.destination);
+        const initialDirections = await getDirections(input.origin, input.destination);
 
         if (initialDirections.status !== 'OK' || !initialDirections.routes || initialDirections.routes.length === 0) {
             return {
@@ -148,7 +144,7 @@ const planRouteFlow = ai.defineFlow(
             }
         }
         
-        const finalDirections = await getDirections(originStr, input.destination, `via:${chargingStop.lat},${chargingStop.lng}`);
+        const finalDirections = await getDirections(input.origin, input.destination, `via:${chargingStop.lat},${chargingStop.lng}`);
 
         if (finalDirections.status !== 'OK') {
              return {

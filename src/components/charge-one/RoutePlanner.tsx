@@ -5,18 +5,20 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Map, Send, Loader2 } from 'lucide-react';
+import { Label } from '../ui/label';
 
 interface RoutePlannerProps {
-    onPlanRoute: (destination: string) => void;
+    onPlanRoute: (origin: string, destination: string) => void;
     isPlanning: boolean;
 }
 
 export default function RoutePlanner({ onPlanRoute, isPlanning }: RoutePlannerProps) {
+    const [origin, setOrigin] = useState('');
     const [destination, setDestination] = useState('');
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        onPlanRoute(destination);
+        onPlanRoute(origin, destination);
     }
 
     return (
@@ -26,16 +28,30 @@ export default function RoutePlanner({ onPlanRoute, isPlanning }: RoutePlannerPr
                     <Map className="h-5 w-5" />
                     Route Planner
                 </CardTitle>
-                <CardDescription>Enter a destination to plan your trip and find charging stations along the way.</CardDescription>
+                <CardDescription>Enter a start and end point to plan your trip and find charging stations along the way.</CardDescription>
             </CardHeader>
             <form onSubmit={handleSubmit}>
-                <CardContent>
-                    <Input 
-                        placeholder="Enter your destination..." 
-                        value={destination}
-                        onChange={(e) => setDestination(e.target.value)}
-                        disabled={isPlanning}
-                    />
+                <CardContent className="space-y-4">
+                     <div className="space-y-2">
+                        <Label htmlFor="origin">Starting Point</Label>
+                        <Input 
+                            id="origin"
+                            placeholder="Current Location" 
+                            value={origin}
+                            onChange={(e) => setOrigin(e.target.value)}
+                            disabled={isPlanning}
+                        />
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="destination">Destination</Label>
+                        <Input 
+                            id="destination"
+                            placeholder="Enter your destination..." 
+                            value={destination}
+                            onChange={(e) => setDestination(e.target.value)}
+                            disabled={isPlanning}
+                        />
+                    </div>
                 </CardContent>
                 <CardFooter>
                     <Button type="submit" className="w-full" disabled={isPlanning}>
