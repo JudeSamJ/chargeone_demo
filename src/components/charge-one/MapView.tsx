@@ -3,7 +3,7 @@
 import { GoogleMap, MarkerF, useJsApiLoader } from '@react-google-maps/api';
 import type { Station } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { findStations } from '@/ai/flows/findStations';
 
 interface MapViewProps {
@@ -19,9 +19,10 @@ const containerStyle = {
   borderRadius: '0.5rem',
 };
 
-const center = {
-  lat: 20.5937,
-  lng: 78.9629
+// Center of Tamil Nadu
+const initialCenter = {
+  lat: 11.1271,
+  lng: 78.6569
 };
 
 const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "";
@@ -29,26 +30,59 @@ const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "";
 export default function MapView({ stations, onStationsLoaded, onSelectStation, selectedStationId }: MapViewProps) {
   const { isLoaded, loadError } = useJsApiLoader({
     googleMapsApiKey: apiKey,
+    libraries: ['places'],
   });
   
   const [error, setError] = useState<string | null>(null);
+  const mapRef = useRef<google.maps.Map | null>(null);
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  useEffect(() => {
-    const fetchStations = async () => {
+  const fetchStationsForCenter = useCallback(async (center: { lat: number, lng: number }) => {
       try {
         const fetchedStations = await findStations({ lat: center.lat, lng: center.lng });
-        onStationsLoaded(fetchedStations);
+        // To avoid duplicates, we'll create a map of existing station IDs
+        const existingStationIds = new Set(stations.map(s => s.id));
+        const newStations = fetchedStations.filter(s => !existingStationIds.has(s.id));
+        onStationsLoaded([...stations, ...newStations]);
         setError(null);
       } catch (err) {
         console.error("Error fetching stations:", err);
         setError("Could not load station data. Please ensure the Places API is enabled for your API key.");
       }
-    };
+  }, [onStationsLoaded, stations]);
 
-    if (isLoaded && !error) {
-        fetchStations();
+
+  const onMapIdle = useCallback(() => {
+    if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
     }
-  }, [isLoaded, onStationsLoaded, error]);
+    searchTimeoutRef.current = setTimeout(() => {
+        if (mapRef.current) {
+            const newCenter = mapRef.current.getCenter();
+            if (newCenter) {
+                fetchStationsForCenter({ lat: newCenter.lat(), lng: newCenter.lng() });
+            }
+        }
+    }, 500); // Debounce requests to avoid too many API calls
+    
+  }, [fetchStationsForCenter]);
+
+
+  const onLoad = useCallback(function callback(map: google.maps.Map) {
+    mapRef.current = map;
+    // Initial fetch
+    fetchStationsForCenter(initialCenter);
+  }, [fetchStationsForCenter]);
+
+  useEffect(() => {
+    // Cleanup timeout on component unmount
+    return () => {
+        if (searchTimeoutRef.current) {
+            clearTimeout(searchTimeoutRef.current);
+        }
+    }
+  }, []);
+
 
   if (loadError || error) {
      return (
@@ -90,8 +124,10 @@ export default function MapView({ stations, onStationsLoaded, onSelectStation, s
         <CardContent>
              <GoogleMap
                 mapContainerStyle={containerStyle}
-                center={center}
-                zoom={5}
+                center={initialCenter}
+                zoom={7}
+                onLoad={onLoad}
+                onIdle={onMapIdle}
               >
                 {stations.map(station => (
                   <MarkerF
