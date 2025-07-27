@@ -83,7 +83,7 @@ export default function MapView({ onStationsFound, stations, onStationClick, rou
     }, [onStationsFound, toast]);
 
     useEffect(() => {
-        if (route && mapRef.current) {
+        if (route && mapRef.current && isLoaded) {
             const bounds = new google.maps.LatLngBounds();
             const routeLeg = route.routes[0]?.legs[0];
 
@@ -98,11 +98,11 @@ export default function MapView({ onStationsFound, stations, onStationClick, rou
 
             if (route.routes[0]?.bounds) {
                 const routeBounds = route.routes[0].bounds;
-                const ne = routeBounds.getNorthEast();
-                const sw = routeBounds.getSouthWest();
+                const ne = routeBounds.northeast;
+                const sw = routeBounds.southwest;
                 const newBounds = new google.maps.LatLngBounds(
-                    new google.maps.LatLng(sw.lat(), sw.lng()),
-                    new google.maps.LatLng(ne.lat(), ne.lng())
+                    new google.maps.LatLng(sw.lat, sw.lng),
+                    new google.maps.LatLng(ne.lat, ne.lng)
                 );
                 bounds.union(newBounds);
             }
@@ -112,19 +112,24 @@ export default function MapView({ onStationsFound, stations, onStationClick, rou
         } else {
             setDestinationLocation(null);
         }
-    }, [route]);
+    }, [route, isLoaded]);
 
-    const getStationMarkerColor = (status: Station['status']) => {
-        switch (status) {
-            case 'available':
-                return '#10B981'; // Green
-            case 'in-use':
-                return '#EF4444'; // Red
-            case 'unavailable':
-                return '#808080'; // Grey
-            default:
-                return '#808080';
+    const getStationMarkerIcon = (status: Station['status']) => {
+        let color = '#808080'; // Grey for unavailable
+        if (status === 'available') {
+            color = '#10B981'; // Green
+        } else if (status === 'in-use') {
+            color = '#EF4444'; // Red
         }
+
+        return {
+            path: google.maps.SymbolPath.CIRCLE,
+            fillColor: color,
+            fillOpacity: 1,
+            strokeColor: '#ffffff',
+            strokeWeight: 1.5,
+            scale: 7,
+        };
     };
 
 
@@ -167,14 +172,7 @@ export default function MapView({ onStationsFound, stations, onStationClick, rou
                         position={{ lat: station.lat, lng: station.lng }}
                         title={`${station.name} (${station.power}kW)`}
                         onClick={() => onStationClick(station)}
-                        icon={{
-                            path: google.maps.SymbolPath.CIRCLE,
-                            fillColor: getStationMarkerColor(station.status),
-                            fillOpacity: 1,
-                            strokeColor: '#ffffff',
-                            strokeWeight: 1.5,
-                            scale: 7,
-                        }}
+                        icon={getStationMarkerIcon(station.status)}
                     />
                 ))}
 
