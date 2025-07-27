@@ -15,9 +15,8 @@ interface MapViewProps {
 }
 
 const mapContainerStyle = {
-  width: '100%',
-  height: '600px',
-  borderRadius: '0.5rem',
+  width: '100vw',
+  height: '100vh',
 };
 
 const defaultCenter = {
@@ -92,8 +91,8 @@ export default function MapView({ stations, selectedStation, onStationSelect, on
     }, [route]);
 
 
-    if (loadError) return <div className="flex items-center justify-center h-[600px] bg-muted rounded-lg"><p>Error loading map</p></div>;
-    if (!isLoaded) return <div className="flex items-center justify-center h-[600px] bg-muted rounded-lg"><p>Loading Map...</p></div>;
+    if (loadError) return <div className="flex items-center justify-center h-screen w-screen bg-muted rounded-lg"><p>Error loading map</p></div>;
+    if (!isLoaded) return <div className="flex items-center justify-center h-screen w-screen bg-muted rounded-lg"><p>Loading Map...</p></div>;
 
     return (
         <GoogleMap

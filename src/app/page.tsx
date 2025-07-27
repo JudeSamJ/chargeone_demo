@@ -4,20 +4,15 @@
 import { useState, Suspense, useEffect, useCallback } from 'react';
 import type { Station, Vehicle } from '@/lib/types';
 import { defaultVehicle } from '@/lib/mock-data';
-import Header from '@/components/charge-one/Header';
-import WalletCard from '@/components/charge-one/WalletCard';
-import VehicleStatusCard from '@/components/charge-one/VehicleStatusCard';
 import MapView from '@/components/charge-one/MapView';
-import ChargingSession from '@/components/charge-one/ChargingSession';
 import { Toaster } from '@/components/ui/toaster';
 import { useToast } from '@/hooks/use-toast';
-import RechargeDialog from '@/components/charge-one/RechargeDialog';
 import { useAuth } from '@/hooks/useAuth';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Skeleton } from '@/components/ui/skeleton';
 import { rechargeWallet } from '@/ai/flows/rechargeWallet';
-import RoutePlanner from '@/components/charge-one/RoutePlanner';
 import { planRoute } from '@/ai/flows/planRoute';
+import Controls from '@/components/charge-one/Controls';
 
 function HomePageContent() {
   const [stations, setStations] = useState<Station[]>([]);
@@ -54,9 +49,8 @@ function HomePageContent() {
   
   const handleStationSelect = (station: Station | null) => {
     setSelectedStation(station);
-    // Do not clear the route when selecting a station on it
-    if (route === null) {
-      setRoute(null);
+    if (!station) {
+       setRoute(null);
     }
   };
 
@@ -64,11 +58,6 @@ function HomePageContent() {
     setWalletBalance((prev) => prev - cost);
     setSelectedStation(null);
   };
-  
-  const handleClearSelection = () => {
-    setSelectedStation(null);
-    setRoute(null);
-  }
 
   const handleRecharge = async (amount: number) => {
     try {
@@ -129,59 +118,35 @@ function HomePageContent() {
 
   if (loading || (!user && !isGuest) || !userVehicle) {
     return (
-        <div className="min-h-screen bg-background">
-             <Header />
-            <main className="p-4 sm:p-6 lg:p-8">
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
-                    <div className="lg:col-span-1 flex flex-col gap-8">
-                        <Skeleton className="h-48 w-full" />
-                        <Skeleton className="h-40 w-full" />
-                        <Skeleton className="h-64 w-full" />
-                    </div>
-                    <div className="lg:col-span-2">
-                         <Skeleton className="h-[600px] w-full" />
-                    </div>
-                </div>
-            </main>
+        <div className="relative h-screen w-screen">
+            <Skeleton className="h-full w-full" />
+            <div className="absolute top-4 left-4 z-10">
+                <Skeleton className="h-[600px] w-[400px]" />
+            </div>
         </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <Header />
-      <main className="p-4 sm:p-6 lg:p-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
-          <div className="lg:col-span-1 flex flex-col gap-8">
-            <WalletCard balance={walletBalance} onRecharge={() => setIsRechargeOpen(true)} />
-            <VehicleStatusCard vehicle={userVehicle} />
-            {selectedStation ? (
-              <ChargingSession
-                station={selectedStation}
-                onEndSession={handleEndSession}
-                onClearSelection={handleClearSelection}
-                vehicle={userVehicle}
-              />
-            ) : (
-                <RoutePlanner onPlanRoute={handlePlanRoute} isPlanning={isPlanningRoute} />
-            )}
-          </div>
-          <div className="lg:col-span-2">
-            <MapView 
-              stations={stations} 
-              onStationSelect={handleStationSelect} 
-              onStationsFound={onStationsFound}
-              selectedStation={selectedStation}
-              route={route}
-            />
-          </div>
-        </div>
-      </main>
-      <RechargeDialog 
-        isOpen={isRechargeOpen}
-        onOpenChange={setIsRechargeOpen}
-        onRecharge={handleRecharge}
-        razorpayKeyId={process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID}
+    <div className="relative h-screen w-screen bg-background text-foreground">
+      <Controls
+        userVehicle={userVehicle}
+        walletBalance={walletBalance}
+        setIsRechargeOpen={setIsRechargeOpen}
+        selectedStation={selectedStation}
+        handleEndSession={handleEndSession}
+        handleStationSelect={handleStationSelect}
+        handlePlanRoute={handlePlanRoute}
+        isPlanningRoute={isPlanningRoute}
+        isRechargeOpen={isRechargeOpen}
+        handleRecharge={handleRecharge}
+      />
+      <MapView 
+        stations={stations} 
+        onStationSelect={handleStationSelect} 
+        onStationsFound={onStationsFound}
+        selectedStation={selectedStation}
+        route={route}
       />
       <Toaster />
     </div>
@@ -190,7 +155,7 @@ function HomePageContent() {
 
 export default function Home() {
   return (
-    <Suspense fallback={<div className="flex items-center justify-center min-h-screen bg-background"><p>Loading...</p></div>}>
+    <Suspense fallback={<div className="flex items-center justify-center h-screen w-screen bg-background"><p>Loading...</p></div>}>
       <HomePageContent />
     </Suspense>
   )

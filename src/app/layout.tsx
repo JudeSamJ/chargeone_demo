@@ -20,7 +20,7 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Inter&display=swap" rel="stylesheet" />
         <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
       </head>
-      <body className="font-body antialiased">{children}</body>
+      <body className="font-body antialiased overflow-hidden">{children}</body>
     </html>
   );
 }
