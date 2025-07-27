@@ -11,6 +11,7 @@ export const StationSchema = z.object({
   id: z.string(), // Place ID from Google
   name:z.string(),
   location: z.string(), // Vicinity/address from Google
+  vicinity: z.string().optional(),
   distance: z.number(), // in km
   power: z.number(), // in kW - Note: This is a placeholder as Places API doesn't provide it
   pricePerKwh: z.number(), // in currency - Note: This is a placeholder

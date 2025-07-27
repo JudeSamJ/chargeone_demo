@@ -35,6 +35,7 @@ const findStationsFlow = ai.defineFlow(
       id: p.place_id,
       name: p.name,
       location: p.vicinity,
+      vicinity: p.vicinity,
       distance: 0, // This can be calculated on the client if needed
       power: 50, // Placeholder, not provided by API
       pricePerKwh: 18.50, // Placeholder
