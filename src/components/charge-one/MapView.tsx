@@ -109,6 +109,7 @@ export default function MapView({ onStationsFound, stations, onStationClick, rou
                 disableDefaultUI: true,
                 zoomControl: true,
                 styles: mapStyles,
+                tilt: 45,
             }}
         >
             {isLoaded && (
