@@ -89,11 +89,13 @@ export default function MapView({
   }, []);
 
   useEffect(() => {
-    if (directions && mapRef.current) {
+    if (directions && mapRef.current && directions.routes && directions.routes.length > 0) {
         const bounds = new google.maps.LatLngBounds();
         directions.routes[0].legs.forEach((leg: any) => {
             leg.steps.forEach((step: any) => {
-                step.path.forEach((p: any) => bounds.extend(p));
+                if (step.path) {
+                    step.path.forEach((p: any) => bounds.extend(p));
+                }
             });
         });
         mapRef.current.fitBounds(bounds);
