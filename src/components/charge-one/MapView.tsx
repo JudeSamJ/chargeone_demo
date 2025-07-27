@@ -147,23 +147,24 @@ export default function MapView({
                     zoomControl: true,
                 }}
               >
-                {stations.map(station => (
-                    <MarkerF
-                        key={station.id}
-                        position={{ lat: station.lat, lng: station.lng }}
-                        onClick={() => onSelectStation(station)}
-                        title={station.name}
-                        icon={{
-                            path: typeof window !== 'undefined' ? window.google.maps.SymbolPath.CIRCLE : '',
-                            scale: station.id === selectedStationId ? 10 : 7,
-                            fillColor: station.isAvailable ? "#10B981" : "#F59E0B",
-                            fillOpacity: 1,
-                            strokeWeight: 2,
-                            strokeColor: "#ffffff"
-                        }}
-                    />
-                ))}
-                {directions && routePath && (
+                {!directions ? (
+                    stations.map(station => (
+                        <MarkerF
+                            key={station.id}
+                            position={{ lat: station.lat, lng: station.lng }}
+                            onClick={() => onSelectStation(station)}
+                            title={station.name}
+                            icon={{
+                                path: typeof window !== 'undefined' ? window.google.maps.SymbolPath.CIRCLE : '',
+                                scale: station.id === selectedStationId ? 10 : 7,
+                                fillColor: station.isAvailable ? "#10B981" : "#F59E0B",
+                                fillOpacity: 1,
+                                strokeWeight: 2,
+                                strokeColor: "#ffffff"
+                            }}
+                        />
+                    ))
+                ) : (
                     <>
                         <PolylineF
                         path={routePath}
