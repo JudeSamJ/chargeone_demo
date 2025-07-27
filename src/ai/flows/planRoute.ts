@@ -3,25 +3,9 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
-import { Station, Vehicle } from '@/lib/types';
+import { Station, Vehicle, PlanRouteOutputSchema, PlanRouteInputSchema, PlanRouteInput, PlanRouteOutput } from '@/lib/types';
 import { getDirections } from '@/lib/google-maps';
 import { findStations } from './findStations';
-
-const PlanRouteInputSchema = z.object({
-  origin: z.string(),
-  destination: z.string(),
-  vehicle: z.custom<Vehicle>(),
-});
-
-// The output from google.maps.DirectionsResult is complex, so we use z.any()
-// and cast it in the component.
-const PlanRouteOutputSchema = z.object({
-  route: z.any(),
-  chargingStations: z.array(z.custom<Station>()),
-});
-
-export type PlanRouteInput = z.infer<typeof PlanRouteInputSchema>;
-export type PlanRouteOutput = z.infer<typeof PlanRouteOutputSchema>;
 
 export async function planRoute(input: PlanRouteInput): Promise<PlanRouteOutput> {
   return planRouteFlow(input);
@@ -50,7 +34,6 @@ const planRouteFlow = ai.defineFlow(
     let currentChargeKm = vehicleMaxRangeKm * (vehicle.currentCharge / 100);
     
     const requiredStations: Station[] = [];
-    let distanceTraveledKm = 0;
 
     if (!leg.steps || leg.steps.length === 0) {
         return {
@@ -91,7 +74,6 @@ const planRouteFlow = ai.defineFlow(
         
         // "Consume" the energy for this step
         currentChargeKm -= stepDistanceKm;
-        distanceTraveledKm += stepDistanceKm;
     }
 
 

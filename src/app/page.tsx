@@ -144,7 +144,6 @@ function HomePageContent() {
         stations={stations}
         onStationClick={handleStationSelect}
         route={route}
-        currentLocation={currentLocation}
         onLocationUpdate={setCurrentLocation}
       />
       <Toaster />

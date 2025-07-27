@@ -26,16 +26,16 @@ interface MapViewProps {
   onStationClick: (station: Station) => void;
   stations: Station[];
   route: google.maps.DirectionsResult | null;
-  currentLocation: google.maps.LatLngLiteral | null;
   onLocationUpdate: (location: google.maps.LatLngLiteral) => void;
 }
 
-export default function MapView({ onStationsFound, stations, onStationClick, route, currentLocation, onLocationUpdate }: MapViewProps) {
+export default function MapView({ onStationsFound, stations, onStationClick, route, onLocationUpdate }: MapViewProps) {
     const { isLoaded, loadError } = useJsApiLoader({
         googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "",
         libraries: ['places'],
     });
-
+    
+    const [currentLocation, setCurrentLocation] = useState<google.maps.LatLngLiteral | null>(null);
     const [center, setCenter] = useState(defaultCenter);
     const [destinationLocation, setDestinationLocation] = useState<google.maps.LatLngLiteral | null>(null);
     const { toast } = useToast();
@@ -59,6 +59,7 @@ export default function MapView({ onStationsFound, stations, onStationClick, rou
                         lat: position.coords.latitude,
                         lng: position.coords.longitude,
                     };
+                    setCurrentLocation(currentPosition);
                     onLocationUpdate(currentPosition);
                     
                     // Only pan to location if not actively viewing a route

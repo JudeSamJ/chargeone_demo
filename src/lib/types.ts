@@ -32,3 +32,20 @@ export const FindStationsInputSchema = z.object({
 export type FindStationsInput = z.infer<typeof FindStationsInputSchema>;
 
 export const FindStationsOutputSchema = z.array(StationSchema);
+
+
+export const PlanRouteInputSchema = z.object({
+  origin: z.string(),
+  destination: z.string(),
+  vehicle: z.custom<Vehicle>(),
+});
+
+// The output from google.maps.DirectionsResult is complex, so we use z.any()
+// and cast it in the component.
+export const PlanRouteOutputSchema = z.object({
+  route: z.any(),
+  chargingStations: z.array(z.custom<Station>()),
+});
+
+export type PlanRouteInput = z.infer<typeof PlanRouteInputSchema>;
+export type PlanRouteOutput = z.infer<typeof PlanRouteOutputSchema>;
