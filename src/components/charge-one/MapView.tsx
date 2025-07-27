@@ -76,13 +76,18 @@ export default function MapView({ stations, selectedStation, onStationSelect, on
     }, [searchForStations]);
 
     useEffect(() => {
-        if (route && mapRef.current) {
-            const bounds = new google.maps.LatLngBounds();
-            if (route.routes[0]?.bounds) {
-                bounds.union(route.routes[0].bounds);
-            }
-            if (!bounds.isEmpty()) {
-              mapRef.current.fitBounds(bounds);
+        if (route && mapRef.current && window.google) {
+            const routeBoundsData = route.routes[0]?.bounds;
+            if (routeBoundsData) {
+                // The object from the Directions API (JSON) is a LatLngBoundsLiteral
+                // with `northeast` and `southwest` properties.
+                // The Google Maps JS API's `fitBounds` method expects a `google.maps.LatLngBounds` object.
+                // We must construct it manually.
+                const bounds = new google.maps.LatLngBounds(
+                    routeBoundsData.southwest, // sw
+                    routeBoundsData.northeast  // ne
+                );
+                mapRef.current.fitBounds(bounds);
             }
         }
     }, [route]);
