@@ -1,9 +1,9 @@
+
 "use client";
 
 import { initializeApp, getApps, getApp, FirebaseApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, Auth } from "firebase/auth";
 
-// It's recommended to store your Firebase config in environment variables
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
@@ -14,44 +14,42 @@ const firebaseConfig = {
   measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
 };
 
-let app: FirebaseApp | undefined;
-let auth: Auth | undefined;
+let app: FirebaseApp;
+let auth: Auth;
 
-const requiredConfigs = [
-    'apiKey', 'authDomain', 'projectId'
-];
+// This check is crucial for client-side rendering in Next.js
+if (typeof window !== 'undefined') {
+    const missingConfigs = Object.entries(firebaseConfig)
+        .filter(([key, value]) => !value)
+        .map(([key]) => key);
 
-const missingConfigs = requiredConfigs.filter(key => !firebaseConfig[key as keyof typeof firebaseConfig]);
+    if (missingConfigs.length > 0) {
+        const errorMessage = `Firebase configuration is missing or incomplete. Please check your .env file. Missing environment variables: ${missingConfigs.join(', ')}`;
+        console.error(errorMessage);
+        // We throw an error to halt execution if the config is invalid.
+        // This prevents the app from trying to initialize Firebase with bad data.
+        throw new Error(errorMessage);
+    }
 
-if (missingConfigs.length > 0) {
-    console.error(`Firebase configuration is missing or incomplete. Please check your environment variables. Missing keys: ${missingConfigs.join(', ')}`);
-} else {
-    // Initialize Firebase
-    if (getApps().length === 0) {
+    if (!getApps().length) {
         app = initializeApp(firebaseConfig);
     } else {
         app = getApp();
     }
-
-    // Initialize Auth only if app was initialized
-    if (app) {
-        auth = getAuth(app);
-    }
+    auth = getAuth(app);
 }
 
 const provider = new GoogleAuthProvider();
 
 export const signInWithGoogle = () => {
   if (!auth) {
-    console.error("Firebase Auth is not initialized due to missing configuration.");
-    throw new Error("Firebase Auth is not initialized.");
+    throw new Error("Firebase Auth is not initialized. This is likely due to missing configuration. Check the console for errors.");
   }
   return signInWithPopup(auth, provider);
 };
 
 export const signOutWithGoogle = () => {
   if (!auth) {
-    console.error("Firebase Auth is not initialized due to missing configuration.");
     return Promise.reject("Firebase Auth is not initialized.");
   }
   return signOut(auth);
