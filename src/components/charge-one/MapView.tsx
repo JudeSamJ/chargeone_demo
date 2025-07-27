@@ -36,7 +36,6 @@ export default function MapView({ stations, selectedStation, onStationSelect, on
     const [currentLocation, setCurrentLocation] = useState<google.maps.LatLngLiteral | null>(null);
 
     const searchForStations = useCallback(async (location: { lat: number, lng: number }) => {
-        // Do not search for stations if a route is being displayed
         if (route) return; 
         try {
             const foundStations = await findStations({
@@ -79,10 +78,9 @@ export default function MapView({ stations, selectedStation, onStationSelect, on
     useEffect(() => {
         if (route && mapRef.current) {
             const bounds = new google.maps.LatLngBounds();
-            route.routes[0].legs.forEach(leg => {
-                if (leg.start_location) bounds.extend(leg.start_location);
-                if (leg.end_location) bounds.extend(leg.end_location);
-            });
+            if (route.routes[0]?.bounds) {
+                bounds.union(route.routes[0].bounds);
+            }
             if (!bounds.isEmpty()) {
               mapRef.current.fitBounds(bounds);
             }
@@ -90,7 +88,6 @@ export default function MapView({ stations, selectedStation, onStationSelect, on
     }, [route]);
 
     const destinationMarkerPosition = route?.routes[0]?.legs[0]?.end_location;
-
 
     if (loadError) return <div className="flex items-center justify-center h-screen w-screen bg-muted rounded-lg"><p>Error loading map</p></div>;
     if (!isLoaded) return <div className="flex items-center justify-center h-screen w-screen bg-muted rounded-lg"><p>Loading Map...</p></div>;
@@ -107,13 +104,15 @@ export default function MapView({ stations, selectedStation, onStationSelect, on
                 styles: mapStyles,
             }}
         >
+            {/* Draw the route and destination marker if a route exists */}
             {route && (
               <>
-                <DirectionsRenderer directions={route} options={{ suppressMarkers: true, polylineOptions: { strokeColor: 'hsl(var(--primary))', strokeWeight: 6 } }} />
-                {destinationMarkerPosition && <Marker position={destinationMarkerPosition} />}
+                <DirectionsRenderer directions={route} options={{ suppressMarkers: true, polylineOptions: { strokeColor: 'hsl(var(--primary))', strokeWeight: 6, zIndex: 50 } }} />
+                {destinationMarkerPosition && <Marker position={destinationMarkerPosition} zIndex={100} />}
               </>
             )}
 
+            {/* Draw the user's current location marker */}
             {currentLocation && <Marker position={currentLocation} icon={{
                 path: window.google.maps.SymbolPath.CIRCLE,
                 scale: 8,
@@ -123,6 +122,7 @@ export default function MapView({ stations, selectedStation, onStationSelect, on
                 strokeWeight: 2
             }} />}
 
+            {/* If there is no route, show nearby stations with green/red dots */}
             {!route && stations.map(station => (
                  <Marker
                     key={station.id}
@@ -135,6 +135,7 @@ export default function MapView({ stations, selectedStation, onStationSelect, on
                 />
             ))}
             
+            {/* If there IS a route, show the stations found along the route with a charging icon */}
             {route && stations.map(station => (
                  <Marker
                     key={station.id}
@@ -147,6 +148,7 @@ export default function MapView({ stations, selectedStation, onStationSelect, on
                 />
             ))}
 
+            {/* Show InfoWindow for the selected station */}
             {selectedStation && (
                 <InfoWindow
                     position={{ lat: selectedStation.lat, lng: selectedStation.lng }}

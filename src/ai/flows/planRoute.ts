@@ -41,7 +41,6 @@ const planRouteFlow = ai.defineFlow(
       throw new Error('Could not find a route.');
     }
 
-    // For simplicity, we only consider the first route
     const route = directionsResult.routes[0];
     const leg = route.legs[0];
     const distanceMeters = leg.distance?.value || 0;
@@ -49,7 +48,7 @@ const planRouteFlow = ai.defineFlow(
 
     // 2. Determine if charging is needed
     // Simplified range: uses 1kWh for 5km as a rough estimate
-    const vehicleRangeKm = vehicle.batteryCapacity * 5 * (vehicle.currentCharge / 100); 
+    const vehicleRangeKm = vehicle.batteryCapacity * 5 * (vehicle.currentCharge / 100);
 
     if (distanceKm <= vehicleRangeKm) {
       // No charging needed for this trip, but still return the route
@@ -59,31 +58,34 @@ const planRouteFlow = ai.defineFlow(
       };
     }
     
-    // 3. Find charging stations along the route
+    // 3. Find charging stations along the route if charging is needed
     const allStations: Station[] = [];
     const stationIds = new Set<string>();
 
     if (leg.steps && leg.steps.length > 0) {
-        // Search for stations every 5 steps or so to avoid too many API calls
+        // Iterate through the steps of the route to find stations along the way.
+        // We'll check every 5th step to avoid excessive API calls.
         for (let i = 0; i < leg.steps.length; i += 5) {
             const step = leg.steps[i];
-            const searchPoint = step.end_location;
+            const searchPoint = step.end_location; // This is a LatLngLiteral {lat, lng}
             
-            const foundStations = await findStations({
-                latitude: searchPoint.lat,
-                longitude: searchPoint.lng,
-                radius: 20000 // 20km search radius
-            });
+            if (searchPoint) {
+              const foundStations = await findStations({
+                  latitude: searchPoint.lat,
+                  longitude: searchPoint.lng,
+                  radius: 20000 // 20km search radius from this point on the route
+              });
 
-            foundStations.forEach(station => {
-                if (!stationIds.has(station.id)) {
-                    allStations.push(station);
-                    stationIds.add(station.id);
-                }
-            });
+              foundStations.forEach(station => {
+                  // Avoid adding duplicate stations
+                  if (!stationIds.has(station.id)) {
+                      allStations.push(station);
+                      stationIds.add(station.id);
+                  }
+              });
+            }
         }
     }
-
 
     return {
       route: directionsResult,

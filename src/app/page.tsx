@@ -49,11 +49,8 @@ function HomePageContent() {
   
   const handleStationSelect = (station: Station | null) => {
     setSelectedStation(station);
-    if (!station && !route) {
-       // Only clear the route if the user is deselecting a station
-       // AND there is no active route being displayed.
-       setRoute(null);
-    }
+    // This logic was flawed. We should not clear the route when a station is selected/deselected.
+    // The route should only be cleared when a new one is planned or explicitly cleared.
   };
 
   const handleEndSession = (cost: number) => {
@@ -102,9 +99,10 @@ function HomePageContent() {
             destination,
             vehicle: userVehicle
         });
+        // This is the critical state update.
+        // Set the route and the stations from the flow's result.
         setRoute(result.route);
         setStations(result.chargingStations);
-        setSelectedStation(null);
     } catch (error) {
         console.error("Failed to plan route:", error);
         toast({ variant: 'destructive', title: 'Failed to plan route.' });
