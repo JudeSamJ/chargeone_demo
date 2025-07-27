@@ -64,8 +64,7 @@ const planRouteFlow = ai.defineFlow(
 
     if (leg.steps && leg.steps.length > 0) {
         // Iterate through the steps of the route to find stations along the way.
-        // We'll check every 5th step to avoid excessive API calls.
-        for (let i = 0; i < leg.steps.length; i += 5) {
+        for (let i = 0; i < leg.steps.length; i++) {
             const step = leg.steps[i];
             const searchPoint = step.end_location; // This is a LatLngLiteral {lat, lng}
             
