@@ -89,8 +89,8 @@ export default function MapView({ onStationsFound, stations, onStationClick, rou
 
             if (routeLeg?.end_location) {
                 setDestinationLocation({
-                    lat: routeLeg.end_location.lat(),
-                    lng: routeLeg.end_location.lng(),
+                    lat: routeLeg.end_location.lat,
+                    lng: routeLeg.end_location.lng,
                 });
             } else {
                 setDestinationLocation(null);
