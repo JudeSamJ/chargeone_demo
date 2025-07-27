@@ -43,52 +43,57 @@ const planRouteFlow = ai.defineFlow(
 
     const route = directionsResult.routes[0];
     const leg = route.legs[0];
-    const distanceMeters = leg.distance?.value || 0;
-    const distanceKm = distanceMeters / 1000;
-
-    // 2. Determine if charging is needed
-    // Simplified range: uses 1kWh for 5km as a rough estimate
-    const vehicleRangeKm = vehicle.batteryCapacity * 5 * (vehicle.currentCharge / 100);
-
-    if (distanceKm <= vehicleRangeKm) {
-      // No charging needed for this trip, but still return the route
-      return {
-        route: directionsResult,
-        chargingStations: [],
-      };
-    }
     
-    // 3. Find charging stations along the route if charging is needed
-    const allStations: Station[] = [];
-    const stationIds = new Set<string>();
+    // Simplified range: uses 1kWh for 5km as a rough estimate
+    const vehicleMaxRangeKm = vehicle.batteryCapacity * 5;
+    let currentChargeKm = vehicleMaxRangeKm * (vehicle.currentCharge / 100);
+    
+    const requiredStations: Station[] = [];
+    let distanceTraveledKm = 0;
 
-    if (leg.steps && leg.steps.length > 0) {
-        // Iterate through the steps of the route to find stations along the way.
-        for (let i = 0; i < leg.steps.length; i++) {
-            const step = leg.steps[i];
-            const searchPoint = step.end_location; // This is a LatLngLiteral {lat, lng}
+    if (!leg.steps || leg.steps.length === 0) {
+        return {
+            route: directionsResult,
+            chargingStations: [],
+        };
+    }
+
+    for (const step of leg.steps) {
+        const stepDistanceKm = (step.distance?.value || 0) / 1000;
+        
+        // Check if we can complete the next step
+        if (currentChargeKm < stepDistanceKm) {
+            // Can't make it to the end of this step, need to charge now.
+            const searchPoint = step.start_location;
             
-            if (searchPoint) {
-              const foundStations = await findStations({
-                  latitude: searchPoint.lat,
-                  longitude: searchPoint.lng,
-                  radius: 20000 // 20km search radius from this point on the route
-              });
+            const nearbyStations = await findStations({
+                latitude: searchPoint.lat,
+                longitude: searchPoint.lng,
+                radius: 50000, // 50km search radius
+            });
+            
+            const availableStation = nearbyStations.find(s => s.status === 'available');
 
-              foundStations.forEach(station => {
-                  // Avoid adding duplicate stations
-                  if (!stationIds.has(station.id)) {
-                      allStations.push(station);
-                      stationIds.add(station.id);
-                  }
-              });
+            if (availableStation) {
+                requiredStations.push(availableStation);
+                // Simulate a full recharge
+                currentChargeKm = vehicleMaxRangeKm;
+            } else {
+                // Could not find an available station. For now, we'll just continue,
+                // but a real app might alert the user or try a wider search.
+                console.warn("Could not find an available charging station near", searchPoint);
             }
         }
+        
+        // "Consume" the energy for this step
+        currentChargeKm -= stepDistanceKm;
+        distanceTraveledKm += stepDistanceKm;
     }
+
 
     return {
       route: directionsResult,
-      chargingStations: allStations,
+      chargingStations: requiredStations,
     };
   }
 );
