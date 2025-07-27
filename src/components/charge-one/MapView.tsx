@@ -79,10 +79,9 @@ export default function MapView({ onStationsFound, stations, onStationClick, rou
         if (route && mapRef.current) {
             const bounds = new google.maps.LatLngBounds();
             if (route.routes[0]?.bounds) {
-                // The API returns a LatLngBoundsLiteral, which needs to be converted.
                 const routeBounds = route.routes[0].bounds;
-                const ne = routeBounds.northeast;
-                const sw = routeBounds.southwest;
+                const ne = typeof routeBounds.getNorthEast === 'function' ? routeBounds.getNorthEast() : routeBounds.northeast;
+                const sw = typeof routeBounds.getSouthWest === 'function' ? routeBounds.getSouthWest() : routeBounds.southwest;
                 const newBounds = new google.maps.LatLngBounds(
                     new google.maps.LatLng(sw.lat, sw.lng),
                     new google.maps.LatLng(ne.lat, ne.lng)
@@ -111,18 +110,51 @@ export default function MapView({ onStationsFound, stations, onStationClick, rou
                 styles: mapStyles,
             }}
         >
-           {stations.map(station => (
+            {isLoaded && (
+              <>
+                {/* Marker for current location */}
                 <MarkerF
-                    key={station.id}
-                    position={{ lat: station.lat, lng: station.lng }}
-                    title={station.name}
+                    position={center}
+                    title="Your Location"
                     icon={{
-                        url: station.isAvailable ? '/green-dot.png' : '/red-dot.png',
-                        scaledSize: new google.maps.Size(20, 20),
+                        path: google.maps.SymbolPath.CIRCLE,
+                        fillColor: '#4285F4',
+                        fillOpacity: 1,
+                        strokeColor: '#ffffff',
+                        strokeWeight: 2,
+                        scale: 8,
                     }}
-                    onClick={() => onStationClick(station)}
                 />
-            ))}
+                
+                {/* Markers for EV stations */}
+                {stations.map(station => (
+                    <MarkerF
+                        key={station.id}
+                        position={{ lat: station.lat, lng: station.lng }}
+                        title={station.name}
+                        icon={{
+                            url: station.isAvailable ? '/green-dot.png' : '/red-dot.png',
+                            scaledSize: new google.maps.Size(20, 20),
+                        }}
+                        onClick={() => onStationClick(station)}
+                    />
+                ))}
+
+                {/* Renderer for the planned route */}
+                {route && (
+                  <DirectionsRenderer
+                      directions={route}
+                      options={{
+                          suppressMarkers: true,
+                          polylineOptions: {
+                              strokeColor: 'hsl(var(--primary))',
+                              strokeWeight: 5,
+                          }
+                      }}
+                  />
+                )}
+              </>
+            )}
         </GoogleMap>
     );
 }
