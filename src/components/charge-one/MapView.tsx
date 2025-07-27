@@ -79,13 +79,9 @@ export default function MapView({ stations, selectedStation, onStationSelect, on
         if (route && mapRef.current && window.google) {
             const routeBoundsData = route.routes[0]?.bounds;
             if (routeBoundsData) {
-                // The object from the Directions API (JSON) is a LatLngBoundsLiteral
-                // with `northeast` and `southwest` properties.
-                // The Google Maps JS API's `fitBounds` method expects a `google.maps.LatLngBounds` object.
-                // We must construct it manually.
                 const bounds = new google.maps.LatLngBounds(
-                    routeBoundsData.southwest, // sw
-                    routeBoundsData.northeast  // ne
+                    routeBoundsData.southwest, 
+                    routeBoundsData.northeast 
                 );
                 mapRef.current.fitBounds(bounds);
             }
