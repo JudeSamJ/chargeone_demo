@@ -1,5 +1,5 @@
 
-export const mapStyles = [
+export const mapStylesDark = [
     {
         "featureType": "all",
         "elementType": "labels.text.fill",
@@ -8,7 +8,7 @@ export const mapStyles = [
                 "saturation": 36
             },
             {
-                "color": "#000000"
+                "color": "#ffffff"
             },
             {
                 "lightness": 40

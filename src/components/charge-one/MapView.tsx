@@ -6,7 +6,10 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { findStations } from '@/ai/flows/findStations';
 import type { Station } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
-import { mapStyles } from '@/lib/map-styles';
+import { useTheme } from 'next-themes';
+import { mapStylesLight } from '@/lib/map-styles-light';
+import { mapStylesDark } from '@/lib/map-styles-dark';
+
 
 const mapContainerStyle = {
   width: '100vw',
@@ -34,6 +37,7 @@ export default function MapView({ onStationsFound, stations, onStationClick, rou
     const [center, setCenter] = useState(defaultCenter);
     const { toast } = useToast();
     const mapRef = useRef<google.maps.Map | null>(null);
+    const { theme } = useTheme();
 
     const onMapLoad = useCallback((map: google.maps.Map) => {
         mapRef.current = map;
@@ -108,7 +112,7 @@ export default function MapView({ onStationsFound, stations, onStationClick, rou
             options={{
                 disableDefaultUI: true,
                 zoomControl: true,
-                styles: mapStyles,
+                styles: theme === 'dark' ? mapStylesDark : mapStylesLight,
                 tilt: 45,
             }}
         >

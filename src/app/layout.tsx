@@ -1,6 +1,7 @@
 
 import type {Metadata} from 'next';
 import './globals.css';
+import { ThemeProvider } from '@/components/ThemeProvider';
 
 export const metadata: Metadata = {
   title: 'Firebase Studio App',
@@ -13,14 +14,23 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Inter&display=swap" rel="stylesheet" />
         <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
       </head>
-      <body className="font-body antialiased overflow-hidden">{children}</body>
+      <body className="font-body antialiased overflow-hidden">
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          {children}
+        </ThemeProvider>
+      </body>
     </html>
   );
 }

@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '../ui/button';
+import { ThemeToggle } from './ThemeToggle';
 
 export default function Header() {
   const { user, loading } = useAuth();
@@ -44,7 +45,8 @@ export default function Header() {
             <Bolt className="h-7 w-7 text-primary" />
             <h1 className="text-2xl font-bold text-primary font-headline">ChargeOne</h1>
         </div>
-        <div>
+        <div className="flex items-center gap-2">
+          <ThemeToggle />
           {!loading && (
              user ? (
                 <DropdownMenu>
