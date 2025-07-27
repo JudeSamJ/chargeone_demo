@@ -10,9 +10,8 @@
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 import { findStationsTool } from './findStations';
-import type { Vehicle } from '@/lib/types';
+import type { Vehicle, Station } from '@/lib/types';
 
-// The API key is required for the Directions API call
 const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
 
 const PlanRouteInputSchema = z.object({
@@ -33,9 +32,31 @@ export type PlanRouteInput = z.infer<typeof PlanRouteInputSchema>;
 const PlanRouteOutputSchema = z.object({
     hasSufficientCharge: z.boolean().describe("Whether the vehicle has enough charge to reach the destination without stopping."),
     directions: z.any().optional().describe("The Google Maps DirectionsResult object if a route is found."),
+    chargingStop: z.custom<Station>().optional().describe("The suggested charging station if a stop is needed."),
     errorMessage: z.string().optional().describe("An error message if a route cannot be planned."),
 });
 export type PlanRouteOutput = z.infer<typeof PlanRouteOutputSchema>;
+
+const routingPrompt = ai.definePrompt(
+    {
+      name: 'routingPrompt',
+      tools: [findStationsTool],
+      input: { schema: z.object({
+        distanceKm: z.number(),
+        usableRangeKm: z.number(),
+        midpoint: z.object({ lat: z.number(), lng: z.number() }),
+      })},
+      output: { schema: z.custom<Station>() },
+      prompt: `
+        You are a route planning assistant for an EV charging app.
+        The user needs to travel {{distanceKm}} km, but their vehicle's usable range is only {{usableRangeKm}} km.
+        Find a suitable EV charging station near the midpoint of their route, which is at latitude {{midpoint.lat}} and longitude {{midpoint.lng}}.
+        Prioritize stations that are operational.
+        Return the details of the best station you find.
+        `,
+    }
+);
+
 
 const planRouteFlow = ai.defineFlow(
   {
@@ -51,48 +72,75 @@ const planRouteFlow = ai.defineFlow(
         };
     }
     
-    const directionsUrl = new URL('https://maps.googleapis.com/maps/api/directions/json');
-    directionsUrl.searchParams.append('origin', `${input.origin.lat},${input.origin.lng}`);
-    directionsUrl.searchParams.append('destination', input.destination);
-    directionsUrl.searchParams.append('key', GOOGLE_MAPS_API_KEY);
+    const getDirections = async (origin: string, destination: string, waypoints?: string) => {
+        const url = new URL('https://maps.googleapis.com/maps/api/directions/json');
+        url.searchParams.append('origin', origin);
+        url.searchParams.append('destination', destination);
+        if (waypoints) {
+            url.searchParams.append('waypoints', waypoints);
+        }
+        url.searchParams.append('key', GOOGLE_MAPS_API_KEY);
+        const response = await fetch(url.toString());
+        if (!response.ok) {
+            throw new Error(`Directions API request failed: ${response.statusText}`);
+        }
+        return response.json();
+    }
 
     try {
-        const directionsResponse = await fetch(directionsUrl.toString());
-        if (!directionsResponse.ok) {
-            throw new Error(`Directions API request failed: ${directionsResponse.statusText}`);
-        }
-        const directionsResult = await directionsResponse.json();
+        const originStr = `${input.origin.lat},${input.origin.lng}`;
+        const initialDirections = await getDirections(originStr, input.destination);
 
-        if (directionsResult.status !== 'OK') {
+        if (initialDirections.status !== 'OK') {
             return {
                 hasSufficientCharge: false,
-                errorMessage: `Could not find a route. Directions API status: ${directionsResult.status}`,
+                errorMessage: `Could not find a route. Directions API status: ${initialDirections.status}`,
             };
         }
 
-        const leg = directionsResult.routes[0].legs[0];
+        const leg = initialDirections.routes[0].legs[0];
         const distanceMeters = leg.distance.value;
         const distanceKm = distanceMeters / 1000;
         
-        // Assuming an average efficiency of 5 km/kWh
+        // Average efficiency of 5 km/kWh
         const totalRangeKm = (input.vehicle.batteryCapacity * (input.vehicle.currentCharge / 100)) * 5; 
-        // Applying a 20% safety buffer
-        const usableRangeKm = totalRangeKm * 0.8; 
+        const usableRangeKm = totalRangeKm * 0.8; // 20% safety buffer
 
         if (usableRangeKm > distanceKm) {
              return {
                 hasSufficientCharge: true,
-                directions: directionsResult,
+                directions: initialDirections,
             };
         }
         
-        // If charge is not sufficient, for now we will return the direct route 
-        // and a message indicating a stop is needed. A full implementation would
-        // use the findStationsTool to find a charger along the route.
+        // Charge is not sufficient, find a charging station.
+        const overview_path = initialDirections.routes[0].overview_path;
+        const midPointIndex = Math.floor(overview_path.length / 2);
+        const midPoint = overview_path[midPointIndex];
+        
+        const llmResponse = await routingPrompt({
+            distanceKm,
+            usableRangeKm,
+            midpoint: { lat: midPoint.lat, lng: midPoint.lng },
+        });
+
+        const chargingStop = llmResponse.output();
+        
+        if (!chargingStop || !chargingStop.lat || !chargingStop.lng) {
+             return {
+                hasSufficientCharge: false,
+                directions: initialDirections,
+                errorMessage: "Your vehicle doesn't have enough charge, and we couldn't find a suitable charging station on the route."
+            }
+        }
+        
+        const finalDirections = await getDirections(originStr, input.destination, `via:${chargingStop.lat},${chargingStop.lng}`);
+
         return {
             hasSufficientCharge: false,
-            directions: directionsResult,
-            errorMessage: "Your vehicle doesn't have enough charge for this trip. A charging stop will be required."
+            directions: finalDirections,
+            chargingStop: chargingStop,
+            errorMessage: `A stop at ${chargingStop.name} is required to complete this trip.`
         }
 
     } catch(e: any) {

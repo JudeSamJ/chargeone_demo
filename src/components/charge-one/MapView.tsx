@@ -13,6 +13,7 @@ interface MapViewProps {
     selectedStationId?: string | null;
     initialCenter: { lat: number, lng: number };
     directions?: any;
+    chargingStop?: Station | null;
 }
 
 const containerStyle = {
@@ -30,7 +31,8 @@ export default function MapView({
     onSelectStation, 
     selectedStationId,
     initialCenter,
-    directions 
+    directions,
+    chargingStop
 }: MapViewProps) {
   const { isLoaded, loadError } = useJsApiLoader({
     googleMapsApiKey: apiKey,
@@ -145,6 +147,7 @@ export default function MapView({
                 }}
               >
                 {directions ? (
+                    <>
                     <DirectionsRenderer 
                         directions={directions} 
                         options={{
@@ -155,6 +158,17 @@ export default function MapView({
                             }
                         }}
                     />
+                    {chargingStop && (
+                        <MarkerF
+                            position={{ lat: chargingStop.lat, lng: chargingStop.lng }}
+                            title={chargingStop.name}
+                            icon={{
+                                url: 'https://maps.google.com/mapfiles/kml/shapes/gas_stations.png',
+                                scaledSize: new google.maps.Size(40, 40)
+                            }}
+                        />
+                    )}
+                    </>
                 ) : (
                     <>
                     {stations.map(station => (

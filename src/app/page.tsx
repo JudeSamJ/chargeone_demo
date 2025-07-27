@@ -26,6 +26,7 @@ function HomePageContent() {
   const [directions, setDirections] = useState<any>(null);
   const [isPlanningRoute, setIsPlanningRoute] = useState(false);
   const [currentLocation, setCurrentLocation] = useState<{lat: number, lng: number} | null>(null);
+  const [chargingStop, setChargingStop] = useState<Station | null>(null);
 
   const { toast } = useToast();
   const { user, loading } = useAuth();
@@ -37,7 +38,6 @@ function HomePageContent() {
     if (!loading && !user && !isGuest) {
       router.push('/login');
     }
-    // Get user's current location
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(position => {
         setCurrentLocation({
@@ -45,12 +45,10 @@ function HomePageContent() {
           lng: position.coords.longitude
         });
       }, () => {
-        // Fallback to a default location if user denies permission
-        setCurrentLocation({ lat: 10.7905, lng: 78.7047 }); 
+        setCurrentLocation({ lat: 11.1271, lng: 78.6569 }); 
       });
     } else {
-      // Fallback for older browsers
-      setCurrentLocation({ lat: 10.7905, lng: 78.7047 });
+      setCurrentLocation({ lat: 11.1271, lng: 78.6569 });
     }
   }, [user, loading, router, isGuest]);
 
@@ -123,6 +121,7 @@ function HomePageContent() {
     
     setIsPlanningRoute(true);
     setDirections(null);
+    setChargingStop(null);
     
     try {
         const result = await planRoute({
@@ -133,9 +132,11 @@ function HomePageContent() {
 
         if (result.errorMessage && !result.directions) {
             toast({ variant: 'destructive', title: "Route Planning Error", description: result.errorMessage });
-        }
-        if (result.directions) {
+        } else {
             setDirections(result.directions);
+            if (result.chargingStop) {
+                setChargingStop(result.chargingStop);
+            }
             if (!result.hasSufficientCharge) {
                 toast({ 
                   variant: 'default', 
@@ -197,6 +198,7 @@ function HomePageContent() {
               selectedStationId={selectedStation?.id}
               initialCenter={currentLocation}
               directions={directions}
+              chargingStop={chargingStop}
             />
           </div>
         </div>
