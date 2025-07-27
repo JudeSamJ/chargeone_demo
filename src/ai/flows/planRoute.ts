@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview A flow to plan a route with necessary charging stops.
@@ -9,8 +10,8 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
-import { findStationsTool } from './findStations';
-import type { Vehicle, Station } from '@/lib/types';
+import { findStations } from './findStations';
+import type { Station } from '@/lib/types';
 
 const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
 
@@ -29,30 +30,10 @@ export type PlanRouteInput = z.infer<typeof PlanRouteInputSchema>;
 const PlanRouteOutputSchema = z.object({
     hasSufficientCharge: z.boolean().describe("Whether the vehicle has enough charge to reach the destination without stopping."),
     directions: z.any().optional().describe("The Google Maps DirectionsResult object if a route is found."),
-    chargingStop: z.custom<Station>().optional().describe("The suggested charging station if a stop is needed."),
+    chargingStops: z.array(z.custom<Station>()).optional().describe("A list of suggested charging stations if a stop is needed."),
     errorMessage: z.string().optional().describe("An error message if a route cannot be planned."),
 });
 export type PlanRouteOutput = z.infer<typeof PlanRouteOutputSchema>;
-
-const routingPrompt = ai.definePrompt(
-    {
-      name: 'routingPrompt',
-      tools: [findStationsTool],
-      input: { schema: z.object({
-        distanceKm: z.number(),
-        usableRangeKm: z.number(),
-        midpoint: z.object({ lat: z.number(), lng: z.number() }),
-      })},
-      output: { schema: z.custom<Station>() },
-      prompt: `
-        You are a route planning assistant for an EV charging app.
-        The user needs to travel {{distanceKm}} km, but their vehicle's usable range is only {{usableRangeKm}} km.
-        Find a suitable EV charging station near the midpoint of their route, which is at latitude {{midpoint.lat}} and longitude {{midpoint.lng}}.
-        Prioritize stations that are operational.
-        Return the details of the best station you find.
-        `,
-    }
-);
 
 // Helper function to calculate the midpoint
 const getMidpoint = (start: {lat: number, lng: number}, end: {lat: number, lng: number}) => {
@@ -82,13 +63,10 @@ const planRouteFlow = ai.defineFlow(
         };
     }
     
-    const getDirections = async (origin: string, destination: string, waypoints?: string) => {
+    const getDirections = async (origin: string, destination: string) => {
         const url = new URL('https://maps.googleapis.com/maps/api/directions/json');
         url.searchParams.append('origin', origin);
         url.searchParams.append('destination', destination);
-        if (waypoints) {
-            url.searchParams.append('waypoints', waypoints);
-        }
         url.searchParams.append('key', GOOGLE_MAPS_API_KEY);
         const response = await fetch(url.toString());
         if (!response.ok) {
@@ -122,7 +100,7 @@ const planRouteFlow = ai.defineFlow(
             };
         }
         
-        // Charge is not sufficient, find a charging station.
+        // Charge is not sufficient, find charging stations.
         const startCoords = leg.start_location; // { lat, lng }
         const endCoords = leg.end_location; // { lat, lng }
         
@@ -133,45 +111,23 @@ const planRouteFlow = ai.defineFlow(
             };
         }
         const midPoint = getMidpoint(startCoords, endCoords);
-        
-        const { output } = await routingPrompt({
-            distanceKm,
-            usableRangeKm,
-            midpoint: midPoint,
-        });
-        
-        if (!output) {
-             return {
+
+        // Find stations around the midpoint
+        const nearbyStations = await findStations({ lat: midPoint.lat, lng: midPoint.lng, radius: 50000 });
+
+        if (!nearbyStations || nearbyStations.length === 0) {
+            return {
                 hasSufficientCharge: false,
                 directions: initialDirections,
-                errorMessage: "Your vehicle doesn't have enough charge, and we couldn't find a suitable charging station on the route."
-            }
-        }
-        const chargingStop = output;
-        
-        if (!chargingStop || !chargingStop.lat || !chargingStop.lng) {
-             return {
-                hasSufficientCharge: false,
-                directions: initialDirections,
-                errorMessage: "Your vehicle doesn't have enough charge, and we couldn't find a suitable charging station on the route."
+                errorMessage: "Your vehicle doesn't have enough charge, and we couldn't find any suitable charging stations on the route."
             }
         }
         
-        const finalDirections = await getDirections(input.origin, input.destination, `via:${chargingStop.lat},${chargingStop.lng}`);
-
-        if (finalDirections.status !== 'OK') {
-             return {
-                hasSufficientCharge: false,
-                directions: initialDirections, // Return original route
-                errorMessage: `A charge is needed, but we failed to plot a new route through a station. Error: ${finalDirections.status}`
-            }
-        }
-
         return {
             hasSufficientCharge: false,
-            directions: finalDirections,
-            chargingStop: chargingStop,
-            errorMessage: `A stop at ${chargingStop.name} is required to complete this trip.`
+            directions: initialDirections, // Return the original direct route
+            chargingStops: nearbyStations, // Return all nearby stations as options
+            errorMessage: `A charging stop is required to complete this trip. Check the map for options.`
         }
 
     } catch(e: any) {

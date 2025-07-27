@@ -26,7 +26,7 @@ function HomePageContent() {
   const [directions, setDirections] = useState<any>(null);
   const [isPlanningRoute, setIsPlanningRoute] = useState(false);
   const [currentLocation, setCurrentLocation] = useState<{lat: number, lng: number} | null>(null);
-  const [chargingStop, setChargingStop] = useState<Station | null>(null);
+  const [chargingStops, setChargingStops] = useState<Station[]>([]);
   const [locationError, setLocationError] = useState<string | null>(null);
 
 
@@ -149,7 +149,7 @@ function HomePageContent() {
     
     setIsPlanningRoute(true);
     setDirections(null);
-    setChargingStop(null);
+    setChargingStops([]);
     
     try {
         const result = await planRoute({
@@ -162,8 +162,8 @@ function HomePageContent() {
             toast({ variant: 'destructive', title: "Route Planning Error", description: result.errorMessage });
         } else {
             setDirections(result.directions);
-            if (result.chargingStop) {
-                setChargingStop(result.chargingStop);
+            if (result.chargingStops && result.chargingStops.length > 0) {
+                setChargingStops(result.chargingStops);
             }
             if (result.errorMessage) {
                 toast({ 
@@ -227,7 +227,7 @@ function HomePageContent() {
               selectedStationId={selectedStation?.id}
               initialCenter={currentLocation}
               directions={directions}
-              chargingStop={chargingStop}
+              chargingStops={chargingStops}
             />
           </div>
         </div>

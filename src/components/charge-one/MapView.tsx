@@ -14,7 +14,7 @@ interface MapViewProps {
     selectedStationId?: string | null;
     initialCenter: { lat: number, lng: number };
     directions?: any;
-    chargingStop?: Station | null;
+    chargingStops?: Station[];
 }
 
 const containerStyle = {
@@ -33,7 +33,7 @@ export default function MapView({
     selectedStationId,
     initialCenter,
     directions,
-    chargingStop
+    chargingStops
 }: MapViewProps) {
   const { isLoaded, loadError } = useJsApiLoader({
     googleMapsApiKey: apiKey,
@@ -95,11 +95,8 @@ export default function MapView({
     if (directions && mapRef.current && directions.routes && directions.routes.length > 0) {
         const bounds = new google.maps.LatLngBounds();
         directions.routes[0].legs.forEach((leg: any) => {
-            leg.steps.forEach((step: any) => {
-                if (step.path) {
-                    step.path.forEach((p: any) => bounds.extend(p));
-                }
-            });
+            if (leg.start_location) bounds.extend(leg.start_location);
+            if (leg.end_location) bounds.extend(leg.end_location);
         });
         mapRef.current.fitBounds(bounds);
     }
@@ -175,15 +172,17 @@ export default function MapView({
                         position={directions.routes[0].legs[directions.routes[0].legs.length - 1].end_location}
                         title="Destination"
                     />
-                    {chargingStop && (
+                    {chargingStops?.map(station => (
                         <MarkerF
-                            position={{ lat: chargingStop.lat, lng: chargingStop.lng }}
-                            title={chargingStop.name}
+                            key={station.id}
+                            position={{ lat: station.lat, lng: station.lng }}
+                            onClick={() => onSelectStation(station)}
+                            title={station.name}
                             icon={{
                                 url: 'http://maps.google.com/mapfiles/ms/icons/green-dot.png'
                             }}
                         />
-                    )}
+                    ))}
                     </>
                 ) : (
                     <>
