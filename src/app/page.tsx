@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, Suspense } from 'react';
+import { useState, Suspense, useEffect } from 'react';
 import type { Station } from '@/lib/types';
-import { availableStations, userVehicle } from '@/lib/mock-data';
+import { userVehicle } from '@/lib/mock-data';
 import Header from '@/components/charge-one/Header';
 import WalletCard from '@/components/charge-one/WalletCard';
 import VehicleStatusCard from '@/components/charge-one/VehicleStatusCard';
@@ -13,11 +13,12 @@ import { useToast } from '@/hooks/use-toast';
 import RechargeDialog from '@/components/charge-one/RechargeDialog';
 import { useAuth } from '@/hooks/useAuth';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useEffect } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { rechargeWallet } from '@/ai/flows/rechargeWallet';
+import { findStations } from '@/ai/flows/findStations';
 
 function HomePageContent() {
+  const [stations, setStations] = useState<Station[]>([]);
   const [selectedStation, setSelectedStation] = useState<Station | null>(null);
   const [walletBalance, setWalletBalance] = useState(0);
   const [isRechargeOpen, setIsRechargeOpen] = useState(false);
@@ -119,7 +120,8 @@ function HomePageContent() {
             <WalletCard balance={walletBalance} onRecharge={() => setIsRechargeOpen(true)} />
             <VehicleStatusCard vehicle={userVehicle} />
             <MapView 
-              stations={availableStations}
+              stations={stations}
+              onStationsLoaded={setStations}
               onSelectStation={handleSelectStation}
               selectedStationId={selectedStation?.id}
             />

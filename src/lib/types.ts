@@ -6,14 +6,14 @@ export interface Vehicle {
 }
 
 export interface Station {
-  id: number;
+  id: string; // Place ID from Google
   name:string;
-  location: string;
+  location: string; // Vicinity/address from Google
   distance: number; // in km
-  power: number; // in kW
-  pricePerKwh: number; // in currency
-  connectors: ('CCS' | 'CHAdeMO' | 'Type 2')[];
-  isAvailable: boolean;
+  power: number; // in kW - Note: This is a placeholder as Places API doesn't provide it
+  pricePerKwh: number; // in currency - Note: This is a placeholder
+  connectors: ('CCS' | 'CHAdeMO' | 'Type 2')[]; // Placeholder
+  isAvailable: boolean; // True if business_status is OPERATIONAL
   lat: number;
   lng: number;
 }

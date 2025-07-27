@@ -4,11 +4,13 @@ import { GoogleMap, MarkerF, useJsApiLoader } from '@react-google-maps/api';
 import type { Station } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useState, useEffect } from 'react';
+import { findStations } from '@/ai/flows/findStations';
 
 interface MapViewProps {
     stations: Station[];
+    onStationsLoaded: (stations: Station[]) => void;
     onSelectStation: (station: Station) => void;
-    selectedStationId?: number | null;
+    selectedStationId?: string | null;
 }
 
 const containerStyle = {
@@ -22,15 +24,33 @@ const center = {
   lng: 78.9629
 };
 
-const apiKey = "PASTE_YOUR_GOOGLE_MAPS_API_KEY_HERE";
+const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "";
 
-export default function MapView({ stations, onSelectStation, selectedStationId }: MapViewProps) {
+export default function MapView({ stations, onStationsLoaded, onSelectStation, selectedStationId }: MapViewProps) {
   const { isLoaded, loadError } = useJsApiLoader({
-    id: 'google-map-script',
-    googleMapsApiKey: apiKey
+    googleMapsApiKey: apiKey,
   });
   
-  if (loadError) {
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchStations = async () => {
+      try {
+        const fetchedStations = await findStations({ lat: center.lat, lng: center.lng });
+        onStationsLoaded(fetchedStations);
+        setError(null);
+      } catch (err) {
+        console.error("Error fetching stations:", err);
+        setError("Could not load station data. Please ensure the Places API is enabled for your API key.");
+      }
+    };
+
+    if (isLoaded && !error) {
+        fetchStations();
+    }
+  }, [isLoaded, onStationsLoaded, error]);
+
+  if (loadError || error) {
      return (
         <Card>
             <CardHeader>
@@ -39,7 +59,8 @@ export default function MapView({ stations, onSelectStation, selectedStationId }
             <CardContent>
                 <div style={containerStyle} className="bg-destructive/20 text-destructive border border-destructive rounded-lg flex flex-col items-center justify-center text-center p-4">
                     <p className="font-medium">Map Error</p>
-                    <p className="text-sm">Could not load Google Maps. Please ensure you have provided a valid API key.</p>
+                    <p className="text-sm">{error || loadError?.message}</p>
+                    {!apiKey && <p className="text-xs mt-2">API Key not provided. Please add it to your environment file.</p>}
                 </div>
             </CardContent>
         </Card>
@@ -77,11 +98,11 @@ export default function MapView({ stations, onSelectStation, selectedStationId }
                     key={station.id}
                     position={{ lat: station.lat, lng: station.lng }}
                     onClick={() => onSelectStation(station)}
-                    label={station.name}
+                    title={station.name}
                     icon={{
-                        path: window.google.maps.SymbolPath.CIRCLE,
+                        path: typeof window !== 'undefined' ? window.google.maps.SymbolPath.CIRCLE : '',
                         scale: station.id === selectedStationId ? 10 : 7,
-                        fillColor: station.isAvailable ? "#10B981" : "#EF4444",
+                        fillColor: station.isAvailable ? "#10B981" : "#F59E0B",
                         fillOpacity: 1,
                         strokeWeight: 2,
                         strokeColor: "#ffffff"
