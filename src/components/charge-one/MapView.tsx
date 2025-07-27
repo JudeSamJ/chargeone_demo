@@ -147,66 +147,63 @@ export default function MapView({
                     zoomControl: true,
                 }}
               >
-                {directions && routePath ? (
-                    <>
-                    <PolylineF
-                      path={routePath}
-                      options={{
-                        strokeColor: '#29ABE2',
-                        strokeWeight: 6,
-                        strokeOpacity: 0.8,
-                      }}
+                {stations.map(station => (
+                    <MarkerF
+                        key={station.id}
+                        position={{ lat: station.lat, lng: station.lng }}
+                        onClick={() => onSelectStation(station)}
+                        title={station.name}
+                        icon={{
+                            path: typeof window !== 'undefined' ? window.google.maps.SymbolPath.CIRCLE : '',
+                            scale: station.id === selectedStationId ? 10 : 7,
+                            fillColor: station.isAvailable ? "#10B981" : "#F59E0B",
+                            fillOpacity: 1,
+                            strokeWeight: 2,
+                            strokeColor: "#ffffff"
+                        }}
                     />
-                    {directions.routes[0].legs[0].start_location && (
-                         <MarkerF 
-                            position={directions.routes[0].legs[0].start_location}
-                            title="Your Location"
-                            icon={{
-                                path: google.maps.SymbolPath.CIRCLE,
-                                scale: 8,
-                                fillColor: "#4285F4",
-                                fillOpacity: 1,
-                                strokeWeight: 2,
-                                strokeColor: "white",
-                            }}
-                        />
-                    )}
-                    {directions.routes[0].legs[0].end_location && (
-                        <MarkerF 
-                            position={directions.routes[0].legs[directions.routes[0].legs.length - 1].end_location}
-                            title="Destination"
-                        />
-                    )}
-                    {chargingStops?.map(station => (
-                        <MarkerF
-                            key={station.id}
-                            position={{ lat: station.lat, lng: station.lng }}
-                            onClick={() => onSelectStation(station)}
-                            title={station.name}
-                            icon={{
-                                url: 'https://maps.google.com/mapfiles/ms/icons/green-dot.png',
-                                scaledSize: new window.google.maps.Size(40, 40)
-                            }}
-                        />
-                    ))}
-                    </>
-                ) : (
+                ))}
+                {directions && routePath && (
                     <>
-                    {stations.map(station => (
-                        <MarkerF
-                            key={station.id}
-                            position={{ lat: station.lat, lng: station.lng }}
-                            onClick={() => onSelectStation(station)}
-                            title={station.name}
-                            icon={{
-                                path: typeof window !== 'undefined' ? window.google.maps.SymbolPath.CIRCLE : '',
-                                scale: station.id === selectedStationId ? 10 : 7,
-                                fillColor: station.isAvailable ? "#10B981" : "#F59E0B",
-                                fillOpacity: 1,
-                                strokeWeight: 2,
-                                strokeColor: "#ffffff"
-                            }}
+                        <PolylineF
+                        path={routePath}
+                        options={{
+                            strokeColor: '#29ABE2',
+                            strokeWeight: 6,
+                            strokeOpacity: 0.8,
+                        }}
                         />
+                        {directions.routes[0].legs[0].start_location && (
+                            <MarkerF 
+                                position={directions.routes[0].legs[0].start_location}
+                                title="Your Location"
+                                icon={{
+                                    path: google.maps.SymbolPath.CIRCLE,
+                                    scale: 8,
+                                    fillColor: "#4285F4",
+                                    fillOpacity: 1,
+                                    strokeWeight: 2,
+                                    strokeColor: "white",
+                                }}
+                            />
+                        )}
+                        {directions.routes[0].legs[0].end_location && (
+                            <MarkerF 
+                                position={directions.routes[0].legs[directions.routes[0].legs.length - 1].end_location}
+                                title="Destination"
+                            />
+                        )}
+                        {chargingStops?.map(station => (
+                            <MarkerF
+                                key={station.id}
+                                position={{ lat: station.lat, lng: station.lng }}
+                                onClick={() => onSelectStation(station)}
+                                title={station.name}
+                                icon={{
+                                    url: 'https://maps.google.com/mapfiles/ms/icons/green-dot.png',
+                                    scaledSize: new window.google.maps.Size(40, 40)
+                                }}
+                            />
                         ))}
                     </>
                 )}
