@@ -1,8 +1,8 @@
 
 "use client";
 
-import { GoogleMap, useJsApiLoader, MarkerF } from '@react-google-maps/api';
-import { useCallback, useState } from 'react';
+import { GoogleMap, useJsApiLoader, MarkerF, DirectionsRenderer } from '@react-google-maps/api';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { findStations } from '@/ai/flows/findStations';
 import type { Station } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
@@ -22,9 +22,10 @@ interface MapViewProps {
   onStationsFound: (stations: Station[]) => void;
   onStationClick: (station: Station) => void;
   stations: Station[];
+  route: google.maps.DirectionsResult | null;
 }
 
-export default function MapView({ onStationsFound, stations, onStationClick }: MapViewProps) {
+export default function MapView({ onStationsFound, stations, onStationClick, route }: MapViewProps) {
     const { isLoaded, loadError } = useJsApiLoader({
         googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "",
         libraries: ['places'],
@@ -32,8 +33,10 @@ export default function MapView({ onStationsFound, stations, onStationClick }: M
 
     const [center, setCenter] = useState(defaultCenter);
     const { toast } = useToast();
+    const mapRef = useRef<google.maps.Map | null>(null);
 
     const onMapLoad = useCallback((map: google.maps.Map) => {
+        mapRef.current = map;
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
                 (position) => {
@@ -52,17 +55,46 @@ export default function MapView({ onStationsFound, stations, onStationClick }: M
                         });
                 },
                 () => {
-                    toast({ title: 'Could not get your location.' });
+                    toast({ title: 'Could not get your location. Showing default.' });
                     findStations({ latitude: defaultCenter.lat, longitude: defaultCenter.lng, radius: 10000 })
                        .then(onStationsFound)
                        .catch(err => {
                            console.error("Error finding stations:", err);
-                           toast({ variant: 'destructive', title: 'Could not find nearby stations.'});
+                           toast({ variant: 'destructive', title: 'Could not find stations near default location.'});
                        });
                 }
             );
+        } else {
+             toast({ title: 'Geolocation not supported. Showing default location.' });
+             findStations({ latitude: defaultCenter.lat, longitude: defaultCenter.lng, radius: 10000 })
+                .then(onStationsFound)
+                .catch(err => {
+                    console.error("Error finding stations:", err);
+                    toast({ variant: 'destructive', title: 'Could not find stations near default location.'});
+                });
         }
     }, [onStationsFound, toast]);
+
+    useEffect(() => {
+        if (route && mapRef.current) {
+            const bounds = new google.maps.LatLngBounds();
+            if (route.routes[0]?.bounds) {
+                // The API returns a LatLngBoundsLiteral, which needs to be converted.
+                const routeBounds = route.routes[0].bounds;
+                const ne = routeBounds.northeast;
+                const sw = routeBounds.southwest;
+                const newBounds = new google.maps.LatLngBounds(
+                    new google.maps.LatLng(sw.lat, sw.lng),
+                    new google.maps.LatLng(ne.lat, ne.lng)
+                );
+                bounds.union(newBounds);
+            }
+            if (!bounds.isEmpty()) {
+              mapRef.current.fitBounds(bounds);
+            }
+        }
+    }, [route]);
+
 
     if (loadError) return <div className="flex items-center justify-center h-screen w-screen bg-muted rounded-lg"><p>Error loading map</p></div>;
     if (!isLoaded) return <div className="flex items-center justify-center h-screen w-screen bg-muted rounded-lg"><p>Loading Map...</p></div>;
@@ -79,7 +111,7 @@ export default function MapView({ onStationsFound, stations, onStationClick }: M
                 styles: mapStyles,
             }}
         >
-            {stations.map(station => (
+           {stations.map(station => (
                 <MarkerF
                     key={station.id}
                     position={{ lat: station.lat, lng: station.lng }}
