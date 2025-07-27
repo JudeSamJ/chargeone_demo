@@ -93,13 +93,14 @@ export default function MapView({
 
   useEffect(() => {
     if (directions && mapRef.current && directions.routes && directions.routes.length > 0) {
-        const bounds = new google.maps.LatLngBounds();
-        directions.routes[0].legs.forEach((leg: any) => {
-            leg.steps.forEach((step: any) => {
-                step.path.forEach((p: any) => bounds.extend(p));
-            });
-        });
-        mapRef.current.fitBounds(bounds);
+        const route = directions.routes[0];
+        if (route.bounds) {
+            const bounds = new google.maps.LatLngBounds(
+              { lat: route.bounds.south, lng: route.bounds.west },
+              { lat: route.bounds.north, lng: route.bounds.east }
+            );
+            mapRef.current.fitBounds(bounds);
+        }
     }
   }, [directions]);
 
@@ -152,27 +153,31 @@ export default function MapView({
                         options={{
                             suppressMarkers: true,
                             polylineOptions: {
-                                strokeColor: '#0000FF',
+                                strokeColor: '#29ABE2',
                                 strokeWeight: 6,
                             }
                         }}
                     />
-                     <MarkerF 
-                        position={directions.routes[0].legs[0].start_location}
-                        title="Your Location"
-                        icon={{
-                            path: google.maps.SymbolPath.CIRCLE,
-                            scale: 8,
-                            fillColor: "#4285F4",
-                            fillOpacity: 1,
-                            strokeWeight: 2,
-                            strokeColor: "white",
-                        }}
-                    />
-                     <MarkerF 
-                        position={directions.routes[0].legs[directions.routes[0].legs.length - 1].end_location}
-                        title="Destination"
-                    />
+                    {directions.routes[0].legs[0].start_location && (
+                         <MarkerF 
+                            position={directions.routes[0].legs[0].start_location}
+                            title="Your Location"
+                            icon={{
+                                path: google.maps.SymbolPath.CIRCLE,
+                                scale: 8,
+                                fillColor: "#4285F4",
+                                fillOpacity: 1,
+                                strokeWeight: 2,
+                                strokeColor: "white",
+                            }}
+                        />
+                    )}
+                    {directions.routes[0].legs[0].end_location && (
+                        <MarkerF 
+                            position={directions.routes[0].legs[directions.routes[0].legs.length - 1].end_location}
+                            title="Destination"
+                        />
+                    )}
                     {chargingStops?.map(station => (
                         <MarkerF
                             key={station.id}
