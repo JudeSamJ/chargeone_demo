@@ -95,11 +95,7 @@ export default function MapView({
     if (directions && mapRef.current && directions.routes && directions.routes.length > 0) {
         const route = directions.routes[0];
         if (route.bounds) {
-            const bounds = new google.maps.LatLngBounds(
-              { lat: route.bounds.south, lng: route.bounds.west },
-              { lat: route.bounds.north, lng: route.bounds.east }
-            );
-            mapRef.current.fitBounds(bounds);
+            mapRef.current.fitBounds(route.bounds);
         }
     }
   }, [directions]);
