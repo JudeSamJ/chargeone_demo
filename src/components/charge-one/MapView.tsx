@@ -1,9 +1,8 @@
-
 "use client";
 
 import { GoogleMap, useJsApiLoader } from '@react-google-maps/api';
 import { mapStyles } from '@/lib/map-styles';
-import { useCallback, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 const mapContainerStyle = {
   width: '100vw',
@@ -22,9 +21,30 @@ export default function MapView() {
     });
 
     const mapRef = useRef<google.maps.Map | null>(null);
+    const [center, setCenter] = useState(defaultCenter);
 
     const onMapLoad = useCallback((map: google.maps.Map) => {
         mapRef.current = map;
+    }, []);
+
+    useEffect(() => {
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    const currentPosition = {
+                        lat: position.coords.latitude,
+                        lng: position.coords.longitude,
+                    };
+                    setCenter(currentPosition);
+                    if (mapRef.current) {
+                        mapRef.current.panTo(currentPosition);
+                    }
+                },
+                (error) => {
+                    console.warn("Could not get user location, defaulting to center.", error);
+                }
+            );
+        }
     }, []);
 
 
@@ -34,8 +54,8 @@ export default function MapView() {
     return (
         <GoogleMap
             mapContainerStyle={mapContainerStyle}
-            center={defaultCenter}
-            zoom={12}
+            center={center}
+            zoom={14}
             onLoad={onMapLoad}
             options={{
                 disableDefaultUI: true,
@@ -43,7 +63,6 @@ export default function MapView() {
                 styles: mapStyles,
             }}
         >
-            {/* Markers and other elements will be added back here later */}
         </GoogleMap>
     );
 }
