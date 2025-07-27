@@ -30,19 +30,29 @@ const findStationsFlow = ai.defineFlow(
         return [];
     }
 
-    const stations: Station[] = places.map((p: any) => ({
-      id: p.place_id,
-      name: p.name,
-      location: p.vicinity, 
-      vicinity: p.vicinity,
-      distance: 0, 
-      power: 50,
-      pricePerKwh: 18.50,
-      connectors: ['CCS'],
-      isAvailable: p.opening_hours?.open_now ?? (p.business_status === 'OPERATIONAL'),
-      lat: p.geometry?.location?.lat,
-      lng: p.geometry?.location?.lng,
-    })).filter((station: any): station is Station => {
+    const stations: Station[] = places.map((p: any) => {
+      const isOperational = p.opening_hours?.open_now ?? (p.business_status === 'OPERATIONAL');
+      
+      let status: 'available' | 'in-use' | 'unavailable' = 'unavailable';
+      if (isOperational) {
+        // Simulate some stations being in use
+        status = Math.random() > 0.7 ? 'in-use' : 'available';
+      }
+
+      return {
+        id: p.place_id,
+        name: p.name,
+        location: p.vicinity, 
+        vicinity: p.vicinity,
+        distance: 0, 
+        power: 50,
+        pricePerKwh: 18.50,
+        connectors: ['CCS'],
+        status: status,
+        lat: p.geometry?.location?.lat,
+        lng: p.geometry?.location?.lng,
+      }
+    }).filter((station: any): station is Station => {
         if (!station.lat || !station.lng) return false;
         
         return StationSchema.safeParse(station).success;

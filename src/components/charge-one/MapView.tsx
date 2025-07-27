@@ -100,6 +100,19 @@ export default function MapView({ onStationsFound, stations, onStationClick, rou
         }
     }, [route]);
 
+    const getStationMarkerColor = (status: 'available' | 'in-use' | 'unavailable') => {
+        switch (status) {
+            case 'available':
+                return '#10B981'; // Green
+            case 'in-use':
+                return '#EF4444'; // Red
+            case 'unavailable':
+                return '#808080'; // Grey
+            default:
+                return '#808080';
+        }
+    };
+
 
     if (loadError) return <div className="flex items-center justify-center h-screen w-screen bg-muted rounded-lg"><p>Error loading map</p></div>;
     if (!isLoaded) return <div className="flex items-center justify-center h-screen w-screen bg-muted rounded-lg"><p>Loading Map...</p></div>;
@@ -142,7 +155,7 @@ export default function MapView({ onStationsFound, stations, onStationClick, rou
                         onClick={() => onStationClick(station)}
                         icon={{
                             path: google.maps.SymbolPath.CIRCLE,
-                            fillColor: station.isAvailable ? '#10B981' : '#808080',
+                            fillColor: getStationMarkerColor(station.status),
                             fillOpacity: 1,
                             strokeColor: '#ffffff',
                             strokeWeight: 1.5,
