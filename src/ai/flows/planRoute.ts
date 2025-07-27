@@ -65,8 +65,8 @@ const planRouteFlow = ai.defineFlow(
     const midPoint = leg.steps[midPointIndex].end_location;
     
     const chargingStations = await findStations({
-        latitude: midPoint.lat(),
-        longitude: midPoint.lng(),
+        latitude: midPoint.lat,
+        longitude: midPoint.lng,
         radius: 20000 // 20km search radius from midpoint
     });
 
