@@ -16,7 +16,7 @@ export const StationSchema = z.object({
   power: z.number(), // in kW - Note: This is a placeholder as Places API doesn't provide it
   pricePerKwh: z.number(), // in currency - Note: This is a placeholder
   connectors: z.array(z.enum(['CCS', 'CHAdeMO', 'Type 2'])), // Placeholder
-  isAvailable: z.boolean(), // True if business_status is OPERATIONAL
+  isAvailable: z.boolean(), // True if business_status is OPERATIONAL or opening_hours.open_now is true
   lat: z.number(),
   lng: z.number(),
 });

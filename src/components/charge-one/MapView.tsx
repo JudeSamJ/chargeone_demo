@@ -80,8 +80,9 @@ export default function MapView({ onStationsFound, stations, onStationClick, rou
             const bounds = new google.maps.LatLngBounds();
             if (route.routes[0]?.bounds) {
                 const routeBounds = route.routes[0].bounds;
-                const ne = typeof routeBounds.getNorthEast === 'function' ? routeBounds.getNorthEast() : routeBounds.northeast;
-                const sw = typeof routeBounds.getSouthWest === 'function' ? routeBounds.getSouthWest() : routeBounds.southwest;
+                // The DirectionsResult bounds object is a LatLngBoundsLiteral, not a LatLngBounds object
+                const ne = routeBounds.northeast;
+                const sw = routeBounds.southwest;
                 const newBounds = new google.maps.LatLngBounds(
                     new google.maps.LatLng(sw.lat, sw.lng),
                     new google.maps.LatLng(ne.lat, ne.lng)

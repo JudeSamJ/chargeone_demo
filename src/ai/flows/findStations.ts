@@ -34,13 +34,13 @@ const findStationsFlow = ai.defineFlow(
     const stations: Station[] = places.map((p: any) => ({
       id: p.place_id,
       name: p.name,
-      location: p.vicinity,
+      location: p.vicinity, // Use vicinity for the main location string
       vicinity: p.vicinity,
       distance: 0, // This can be calculated on the client if needed
       power: 50, // Placeholder, not provided by API
       pricePerKwh: 18.50, // Placeholder
       connectors: ['CCS'], // Placeholder
-      isAvailable: p.opening_hours?.open_now ?? false, // Use ?? for better null/undefined handling
+      isAvailable: p.opening_hours?.open_now ?? (p.business_status === 'OPERATIONAL'), // Use ?? for better null/undefined handling
       lat: p.geometry?.location?.lat,
       lng: p.geometry?.location?.lng,
     })).filter((station: any): station is Station => {
