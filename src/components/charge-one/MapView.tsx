@@ -26,61 +26,39 @@ interface MapViewProps {
   stations: Station[];
   route: google.maps.DirectionsResult | null;
   onLocationUpdate: (location: google.maps.LatLngLiteral) => void;
-  currentLocation: google.maps.LatLngLiteral | null;
 }
 
-export default function MapView({ onStationsFound, stations, onStationClick, route, onLocationUpdate, currentLocation }: MapViewProps) {
+export default function MapView({ onStationsFound, stations, onStationClick, route, onLocationUpdate }: MapViewProps) {
     const { isLoaded, loadError } = useJsApiLoader({
         googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "",
         libraries: ['places'],
     });
     
     const [center, setCenter] = useState(defaultCenter);
+    const [currentLocation, setCurrentLocation] = useState<google.maps.LatLngLiteral | null>(null);
     const [destinationLocation, setDestinationLocation] = useState<google.maps.LatLngLiteral | null>(null);
     const { toast } = useToast();
     const mapRef = useRef<google.maps.Map | null>(null);
     const { theme } = useTheme();
     const stationsFetchedRef = useRef(false);
 
-    const [directionsRenderer, setDirectionsRenderer] = useState<google.maps.DirectionsRenderer | null>(null);
-
-
     const onMapLoad = useCallback((map: google.maps.Map) => {
         mapRef.current = map;
-        const renderer = new google.maps.DirectionsRenderer({
-            polylineOptions: {
-                strokeColor: '#4285F4',
-                strokeWeight: 6,
-            }
-        });
-        renderer.setMap(map);
-        setDirectionsRenderer(renderer);
-    }, []);
-
-    useEffect(() => {
-        if (!isLoaded) return;
-
-        let watchId: number;
-
+        // Start tracking location once map is loaded
         if (navigator.geolocation) {
-            watchId = navigator.geolocation.watchPosition(
+            navigator.geolocation.getCurrentPosition(
                 (position) => {
-                    const currentPosition = {
+                    const currentPos = {
                         lat: position.coords.latitude,
                         lng: position.coords.longitude,
                     };
-                    onLocationUpdate(currentPosition);
-                    
-                    if (!route) {
-                        setCenter(currentPosition);
-                        if(mapRef.current) {
-                           mapRef.current.panTo(currentPosition);
-                        }
-                    }
+                    setCurrentLocation(currentPos);
+                    onLocationUpdate(currentPos);
+                    setCenter(currentPos);
 
-                    if (!stationsFetchedRef.current) {
+                     if (!stationsFetchedRef.current) {
                         stationsFetchedRef.current = true;
-                        findStations({ latitude: currentPosition.lat, longitude: currentPosition.lng, radius: 10000 })
+                        findStations({ latitude: currentPos.lat, longitude: currentPos.lng, radius: 10000 })
                             .then(onStationsFound)
                             .catch(err => {
                                 console.error("Error finding stations:", err);
@@ -99,11 +77,6 @@ export default function MapView({ onStationsFound, stations, onStationClick, rou
                                toast({ variant: 'destructive', title: 'Could not find stations near default location.'});
                            });
                     }
-                },
-                {
-                    enableHighAccuracy: true,
-                    timeout: 10000,
-                    maximumAge: 0,
                 }
             );
         } else {
@@ -118,18 +91,10 @@ export default function MapView({ onStationsFound, stations, onStationClick, rou
                     });
             }
         }
-
-        return () => {
-            if (watchId) {
-                navigator.geolocation.clearWatch(watchId);
-            }
-        };
-    }, [isLoaded, onStationsFound, toast, route, onLocationUpdate]);
-
+    }, [onLocationUpdate, onStationsFound, toast]);
 
     useEffect(() => {
-        if (route && mapRef.current && isLoaded && directionsRenderer) {
-            directionsRenderer.setDirections(route);
+        if (route && mapRef.current && isLoaded) {
             const bounds = new google.maps.LatLngBounds();
             const routeLeg = route.routes[0]?.legs[0];
 
@@ -157,11 +122,8 @@ export default function MapView({ onStationsFound, stations, onStationClick, rou
             }
         } else {
             setDestinationLocation(null);
-            if (directionsRenderer) {
-                directionsRenderer.setDirections(null);
-            }
         }
-    }, [route, isLoaded, directionsRenderer]);
+    }, [route, isLoaded]);
 
     const getStationMarkerIcon = (status: Station['status']) => {
         let color = '#808080'; // Grey for unavailable
@@ -181,6 +143,19 @@ export default function MapView({ onStationsFound, stations, onStationClick, rou
         };
     };
 
+    const getDestinationMarkerIcon = () => {
+      if (!isLoaded) return null;
+      return {
+          path: 'M12 2L4.5 20.29l.71.71L12 18l6.79 3 .71-.71z', // A simple star shape
+          fillColor: '#FFD700', // Gold
+          fillOpacity: 1,
+          strokeColor: '#000000',
+          strokeWeight: 1,
+          scale: 1.5,
+          anchor: new google.maps.Point(12, 12),
+      }
+    };
+
 
     if (loadError) return <div className="flex items-center justify-center h-screen w-screen bg-muted rounded-lg"><p>Error loading map</p></div>;
     if (!isLoaded) return <div className="flex items-center justify-center h-screen w-screen bg-muted rounded-lg"><p>Loading Map...</p></div>;
@@ -195,7 +170,6 @@ export default function MapView({ onStationsFound, stations, onStationClick, rou
                 disableDefaultUI: true,
                 zoomControl: true,
                 styles: theme === 'dark' ? mapStylesDark : mapStylesLight,
-                tilt: 45,
             }}
         >
             {isLoaded && (
@@ -225,18 +199,25 @@ export default function MapView({ onStationsFound, stations, onStationClick, rou
                     />
                 ))}
                 
+                {route && (
+                  <DirectionsRenderer
+                    directions={route}
+                    options={{
+                        polylineOptions: {
+                          strokeColor: '#1976D2',
+                          strokeWeight: 6,
+                          strokeOpacity: 0.8,
+                        },
+                        suppressMarkers: true,
+                    }}
+                  />
+                )}
+                
                 {destinationLocation && (
                     <MarkerF
                         position={destinationLocation}
                         title="Destination"
-                        icon={{
-                            path: google.maps.SymbolPath.CIRCLE,
-                            fillColor: '#FBBF24', // Amber
-                            fillOpacity: 1,
-                            strokeColor: '#ffffff',
-                            strokeWeight: 2,
-                            scale: 12,
-                        }}
+                        icon={getDestinationMarkerIcon()!}
                     />
                 )}
                 
