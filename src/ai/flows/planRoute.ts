@@ -57,6 +57,13 @@ const routingPrompt = ai.definePrompt(
     }
 );
 
+// Helper function to calculate the midpoint
+const getMidpoint = (start: {lat: number, lng: number}, end: {lat: number, lng: number}) => {
+    return {
+        lat: (start.lat + end.lat) / 2,
+        lng: (start.lng + end.lng) / 2,
+    };
+};
 
 const planRouteFlow = ai.defineFlow(
   {
@@ -114,22 +121,16 @@ const planRouteFlow = ai.defineFlow(
         }
         
         // Charge is not sufficient, find a charging station.
-        const overview_path = initialDirections.routes[0].overview_path;
-        if (!overview_path || overview_path.length === 0) {
-             return {
-                hasSufficientCharge: false,
-                errorMessage: "Could not calculate a valid path to find a charging station.",
-            };
-        }
-        const midPointIndex = Math.floor(overview_path.length / 2);
-        const midPoint = overview_path[midPointIndex];
+        const startCoords = leg.start_location; // { lat, lng }
+        const endCoords = leg.end_location; // { lat, lng }
+        const midPoint = getMidpoint(startCoords, endCoords);
         
         const llmResponse = await routingPrompt({
             distanceKm,
             usableRangeKm,
-            midpoint: { lat: midPoint.lat, lng: midPoint.lng },
+            midpoint: midPoint,
         });
-
+        
         const chargingStop = llmResponse.output;
         
         if (!chargingStop || !chargingStop.lat || !chargingStop.lng) {
