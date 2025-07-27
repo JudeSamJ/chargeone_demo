@@ -107,11 +107,9 @@ function HomePageContent() {
     }
   };
 
-  // The `useCallback` hook is essential here to prevent the function from
-  // being recreated on every render, which would cause an infinite loop in MapView's useEffect.
   const onStationsFound = useCallback((foundStations: Station[]) => {
     setStations(foundStations);
-  }, []); // The dependency array is empty because setStations is a stable function from useState.
+  }, []);
 
   if (loading || (!user && !isGuest) || !userVehicle) {
     return (

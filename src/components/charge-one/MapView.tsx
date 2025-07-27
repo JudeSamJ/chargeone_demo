@@ -53,42 +53,46 @@ export default function MapView({ stations, selectedStation, onStationSelect, on
     const onMapLoad = useCallback((map: google.maps.Map) => {
         mapRef.current = map;
 
-        // This ensures that we only run the initial search once
-        if (hasSearched.current) return; 
-
-        navigator.geolocation.getCurrentPosition(
-            (position) => {
-                const newCenter = {
-                    lat: position.coords.latitude,
-                    lng: position.coords.longitude,
-                };
-                setCenter(newCenter);
-                setCurrentLocation(newCenter);
-                map.panTo(newCenter);
-                // Only search if we haven't searched before
-                if (!hasSearched.current) {
-                    searchForStations(newCenter);
-                    hasSearched.current = true;
-                }
-            },
-            () => {
-                // Geolocation failed, search at default location
-                if (!hasSearched.current) {
-                    searchForStations(defaultCenter);
-                    hasSearched.current = true;
-                }
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    const newCenter = {
+                        lat: position.coords.latitude,
+                        lng: position.coords.longitude,
+                    };
+                    setCenter(newCenter);
+                    setCurrentLocation(newCenter);
+                    map.panTo(newCenter);
+                    if (!hasSearched.current) {
+                        searchForStations(newCenter);
+                        hasSearched.current = true;
+                    }
+                },
+                () => {
+                    // Geolocation failed, search at default location
+                    if (!hasSearched.current) {
+                        searchForStations(defaultCenter);
+                        hasSearched.current = true;
+                    }
+                },
+                { enableHighAccuracy: true }
+            );
+        } else {
+             // Browser doesn't support Geolocation, search at default location
+            if (!hasSearched.current) {
+                searchForStations(defaultCenter);
+                hasSearched.current = true;
             }
-        );
+        }
     }, [searchForStations]);
 
     useEffect(() => {
         if (route && mapRef.current && window.google) {
             const routeBoundsData = route.routes[0]?.bounds;
             if (routeBoundsData) {
-                // The Directions API returns a LatLngBoundsLiteral. The JS API needs a LatLngBounds object.
                 const bounds = new google.maps.LatLngBounds(
-                    new google.maps.LatLng(routeBoundsData.southwest.lat, routeBoundsData.southwest.lng), 
-                    new google.maps.LatLng(routeBoundsData.northeast.lat, routeBoundsData.northeast.lng)
+                    routeBoundsData.getSouthWest(), 
+                    routeBoundsData.getNorthEast()
                 );
                 mapRef.current.fitBounds(bounds);
             }
@@ -137,9 +141,8 @@ export default function MapView({ stations, selectedStation, onStationSelect, on
                     position={{ lat: station.lat, lng: station.lng }}
                     onClick={() => onStationSelect(station)}
                     icon={{
-                        // Use a charging icon if a route is planned, otherwise use dots.
                         url: route ? '/charging.png' : (station.isAvailable ? '/green-dot.png' : '/red-dot.png'),
-                        scaledSize: route ? new window.google.maps.Size(30, 30) : new window.google.maps.Size(15, 15),
+                        scaledSize: new window.google.maps.Size(route ? 30 : 15, route ? 30 : 15),
                     }}
                 />
             ))}
