@@ -124,7 +124,7 @@ const planRouteFlow = ai.defineFlow(
             midpoint: { lat: midPoint.lat, lng: midPoint.lng },
         });
 
-        const chargingStop = llmResponse.output();
+        const chargingStop = llmResponse.output;
         
         if (!chargingStop || !chargingStop.lat || !chargingStop.lng) {
              return {
