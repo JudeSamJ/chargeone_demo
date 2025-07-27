@@ -52,7 +52,7 @@ const planRouteFlow = ai.defineFlow(
     const vehicleRangeKm = vehicle.batteryCapacity * 5 * (vehicle.currentCharge / 100); 
 
     if (distanceKm <= vehicleRangeKm) {
-      // No charging needed for this trip
+      // No charging needed for this trip, but still return the route
       return {
         route: directionsResult,
         chargingStations: [],
