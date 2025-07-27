@@ -109,7 +109,7 @@ function HomePageContent() {
 
   const handleStationsFound = useCallback((foundStations: Station[]) => {
     setStations(foundStations);
-  }, []);
+  }, [setStations]);
 
   if (loading || (!user && !isGuest) || !userVehicle) {
     return (
