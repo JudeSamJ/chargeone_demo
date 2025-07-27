@@ -46,10 +46,11 @@ function HomePageContent() {
         });
       }, () => {
         // Fallback to a default location if user denies permission
-        setCurrentLocation({ lat: 11.1271, lng: 78.6569 }); 
+        setCurrentLocation({ lat: 10.7905, lng: 78.7047 }); 
       });
     } else {
-      setCurrentLocation({ lat: 11.1271, lng: 78.6569 });
+      // Fallback for older browsers
+      setCurrentLocation({ lat: 10.7905, lng: 78.7047 });
     }
   }, [user, loading, router, isGuest]);
 
@@ -130,13 +131,17 @@ function HomePageContent() {
             vehicle: userVehicle,
         });
 
-        if (result.errorMessage) {
+        if (result.errorMessage && !result.directions) {
             toast({ variant: 'destructive', title: "Route Planning Error", description: result.errorMessage });
         }
         if (result.directions) {
             setDirections(result.directions);
             if (!result.hasSufficientCharge) {
-                toast({ variant: 'default', title: "Charging Stop Added", description: "Your vehicle requires a charging stop to complete this trip." });
+                toast({ 
+                  variant: 'default', 
+                  title: "Charging Stop Required", 
+                  description: result.errorMessage || "Your vehicle requires a charging stop to complete this trip." 
+                });
             }
         }
     } catch(e) {
@@ -155,7 +160,7 @@ function HomePageContent() {
                     <div className="lg:col-span-2 flex flex-col gap-8">
                         <Skeleton className="h-48 w-full" />
                         <Skeleton className="h-40 w-full" />
-                        <Skeleton className="h-[400px] w-full" />
+                        <Skeleton className="h-[220px] w-full" />
                     </div>
                     <div className="lg:col-span-3">
                          <Skeleton className="h-[600px] w-full" />

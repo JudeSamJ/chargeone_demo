@@ -2,10 +2,9 @@
 
 import { GoogleMap, MarkerF, useJsApiLoader, DirectionsRenderer } from '@react-google-maps/api';
 import type { Station } from '@/lib/types';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { findStations } from '@/ai/flows/findStations';
-import { Zap } from 'lucide-react';
 
 interface MapViewProps {
     stations: Station[];
@@ -35,17 +34,18 @@ export default function MapView({
 }: MapViewProps) {
   const { isLoaded, loadError } = useJsApiLoader({
     googleMapsApiKey: apiKey,
-    libraries: ['places'],
+    libraries: ['places', 'routes'],
   });
   
   const [error, setError] = useState<string | null>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [currentCenter, setCurrentCenter] = useState(initialCenter);
 
   const fetchStationsForCenter = useCallback(async (center: { lat: number, lng: number }) => {
       try {
         const fetchedStations = await findStations({ lat: center.lat, lng: center.lng });
-        // To avoid duplicates, we'll create a map of existing station IDs
+        
         const existingStationIds = new Set(stations.map(s => s.id));
         const newStations = fetchedStations.filter(s => !existingStationIds.has(s.id));
         onStationsLoaded([...stations, ...newStations]);
@@ -62,25 +62,25 @@ export default function MapView({
         clearTimeout(searchTimeoutRef.current);
     }
     searchTimeoutRef.current = setTimeout(() => {
-        if (mapRef.current && !directions) { // Only search on idle if no route is active
+        if (mapRef.current && !directions) { 
             const newCenter = mapRef.current.getCenter();
             if (newCenter) {
-                fetchStationsForCenter({ lat: newCenter.lat(), lng: newCenter.lng() });
+                const newCenterCoords = { lat: newCenter.lat(), lng: newCenter.lng() };
+                setCurrentCenter(newCenterCoords);
+                fetchStationsForCenter(newCenterCoords);
             }
         }
-    }, 500); // Debounce requests to avoid too many API calls
+    }, 500); 
     
   }, [fetchStationsForCenter, directions]);
 
 
   const onLoad = useCallback(function callback(map: google.maps.Map) {
     mapRef.current = map;
-    // Initial fetch
     fetchStationsForCenter(initialCenter);
   }, [fetchStationsForCenter, initialCenter]);
 
   useEffect(() => {
-    // Cleanup timeout on component unmount
     return () => {
         if (searchTimeoutRef.current) {
             clearTimeout(searchTimeoutRef.current);
@@ -88,13 +88,22 @@ export default function MapView({
     }
   }, []);
 
+  useEffect(() => {
+    if (directions && mapRef.current) {
+        const bounds = new google.maps.LatLngBounds();
+        directions.routes[0].legs.forEach((leg: any) => {
+            leg.steps.forEach((step: any) => {
+                step.path.forEach((p: any) => bounds.extend(p));
+            });
+        });
+        mapRef.current.fitBounds(bounds);
+    }
+  }, [directions]);
+
 
   if (loadError || error) {
      return (
         <Card className="h-full">
-            <CardHeader>
-                <CardTitle>Map</CardTitle>
-            </CardHeader>
             <CardContent>
                 <div style={containerStyle} className="bg-destructive/20 text-destructive border border-destructive rounded-lg flex flex-col items-center justify-center text-center p-4">
                     <p className="font-medium">Map Error</p>
@@ -109,9 +118,6 @@ export default function MapView({
   if (!isLoaded) {
     return (
         <Card className="h-full">
-            <CardHeader>
-                <CardTitle>Map</CardTitle>
-            </CardHeader>
             <CardContent>
                 <div style={containerStyle} className="bg-muted flex items-center justify-center">
                     <p>Loading Map...</p>
@@ -126,18 +132,27 @@ export default function MapView({
         <CardContent className="p-0 h-full">
              <GoogleMap
                 mapContainerStyle={containerStyle}
-                center={initialCenter}
-                zoom={directions ? 8 : 10} // Zoom out to see the route, otherwise default zoom
+                center={currentCenter}
+                zoom={10}
                 onLoad={onLoad}
                 onIdle={onMapIdle}
                 options={{
-                    mapId: 'f9496b627755255d', // A custom map style
+                    mapId: 'f9496b627755255d', 
                     disableDefaultUI: true,
                     zoomControl: true,
                 }}
               >
                 {directions ? (
-                    <DirectionsRenderer directions={directions} />
+                    <DirectionsRenderer 
+                        directions={directions} 
+                        options={{
+                            suppressMarkers: true,
+                            polylineOptions: {
+                                strokeColor: '#1976D2',
+                                strokeWeight: 6,
+                            }
+                        }}
+                    />
                 ) : (
                     <>
                     {stations.map(station => (
