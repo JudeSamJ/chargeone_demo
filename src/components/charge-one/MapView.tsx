@@ -5,6 +5,7 @@ import type { Station } from '@/lib/types';
 import { GoogleMap, Marker, useJsApiLoader, InfoWindow, DirectionsRenderer } from '@react-google-maps/api';
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { findStations } from '@/ai/flows/findStations';
+import { mapStyles } from '@/lib/map-styles';
 
 interface MapViewProps {
     stations: Station[];
@@ -34,13 +35,16 @@ export default function MapView({ stations, selectedStation, onStationSelect, on
     const [center, setCenter] = useState(defaultCenter);
 
     const searchForStations = useCallback(async (location: { lat: number, lng: number }) => {
-        if (route) return; // Do not search for nearby stations if a route is active
+        // Do not search for nearby stations if a route is active
+        if (route) return; 
         try {
+            console.log("Searching for stations near:", location);
             const foundStations = await findStations({
                 latitude: location.lat,
                 longitude: location.lng,
                 radius: 10000 // 10km
             });
+            console.log("Found stations:", foundStations);
             onStationsFound(foundStations);
         } catch(e) {
             console.error("Error finding stations", e);
@@ -77,7 +81,7 @@ export default function MapView({ stations, selectedStation, onStationSelect, on
             const bounds = new google.maps.LatLngBounds();
             route.routes[0].legs.forEach(leg => {
                 leg.steps.forEach(step => {
-                    if (step.path) { // Check if path exists
+                    if (step.path) {
                         step.path.forEach(path => {
                             bounds.extend(path);
                         })
@@ -103,7 +107,7 @@ export default function MapView({ stations, selectedStation, onStationSelect, on
             options={{
                 disableDefaultUI: true,
                 zoomControl: true,
-                styles: mapStyles
+                styles: mapStyles,
             }}
         >
             {route && <DirectionsRenderer directions={route} options={{ suppressMarkers: true, polylineOptions: { strokeColor: 'hsl(var(--primary))', strokeWeight: 6 } }} />}
@@ -137,173 +141,3 @@ export default function MapView({ stations, selectedStation, onStationSelect, on
     );
 }
 
-const mapStyles = [
-    {
-        "featureType": "all",
-        "elementType": "geometry.fill",
-        "stylers": [
-            {
-                "weight": "2.00"
-            }
-        ]
-    },
-    {
-        "featureType": "all",
-        "elementType": "geometry.stroke",
-        "stylers": [
-            {
-                "color": "#9c9c9c"
-            }
-        ]
-    },
-    {
-        "featureType": "all",
-        "elementType": "labels.text",
-        "stylers": [
-            {
-                "visibility": "on"
-            }
-        ]
-    },
-    {
-        "featureType": "landscape",
-        "elementType": "all",
-        "stylers": [
-            {
-                "color": "#f2f2f2"
-            }
-        ]
-    },
-    {
-        "featureType": "landscape",
-        "elementType": "geometry.fill",
-        "stylers": [
-            {
-                "color": "#ffffff"
-            }
-        ]
-    },
-    {
-        "featureType": "landscape.man_made",
-        "elementType": "geometry.fill",
-        "stylers": [
-            {
-                "color": "#ffffff"
-            }
-        ]
-    },
-    {
-        "featureType": "poi",
-        "elementType": "all",
-        "stylers": [
-            {
-                "visibility": "off"
-            }
-        ]
-    },
-    {
-        "featureType": "road",
-        "elementType": "all",
-        "stylers": [
-            {
-                "saturation": -100
-            },
-            {
-                "lightness": 45
-            }
-        ]
-    },
-    {
-        "featureType": "road",
-        "elementType": "geometry.fill",
-        "stylers": [
-            {
-                "color": "#eeeeee"
-            }
-        ]
-    },
-    {
-        "featureType": "road",
-        "elementType": "labels.text.fill",
-        "stylers": [
-            {
-                "color": "#7b7b7b"
-            }
-        ]
-    },
-    {
-        "featureType": "road",
-        "elementType": "labels.text.stroke",
-        "stylers": [
-            {
-                "color": "#ffffff"
-            }
-        ]
-    },
-    {
-        "featureType": "road.highway",
-        "elementType": "all",
-        "stylers": [
-            {
-                "visibility": "simplified"
-            }
-        ]
-    },
-    {
-        "featureType": "road.arterial",
-        "elementType": "labels.icon",
-        "stylers": [
-            {
-                "visibility": "off"
-            }
-        ]
-    },
-    {
-        "featureType": "transit",
-        "elementType": "all",
-        "stylers": [
-            {
-                "visibility": "off"
-            }
-        ]
-    },
-    {
-        "featureType": "water",
-        "elementType": "all",
-        "stylers": [
-            {
-                "color": "#46bcec"
-            },
-            {
-                "visibility": "on"
-            }
-        ]
-    },
-    {
-        "featureType": "water",
-        "elementType": "geometry.fill",
-        "stylers": [
-            {
-                "color": "#c8d7d4"
-            }
-        ]
-    },
-    {
-        "featureType": "water",
-        "elementType": "labels.text.fill",
-        "stylers": [
-            {
-                "color": "#070707"
-            }
-        ]
-    },
-    {
-        "featureType": "water",
-        "elementType": "labels.text.stroke",
-        "stylers": [
-            {
-                "color": "#ffffff"
-            }
-        ]
-    }
-];

@@ -50,7 +50,11 @@ function HomePageContent() {
   const handleStationSelect = (station: Station | null) => {
     setSelectedStation(station);
     if (!station) {
-       setRoute(null);
+       // Only clear the route if the user is deselecting a station,
+       // not when the route itself is being planned.
+       if(!isPlanningRoute) {
+         setRoute(null);
+       }
     }
   };
 
@@ -112,7 +116,6 @@ function HomePageContent() {
   };
 
   const onStationsFound = useCallback((foundStations: Station[]) => {
-    setRoute(null);
     setStations(foundStations);
   }, []);
 
