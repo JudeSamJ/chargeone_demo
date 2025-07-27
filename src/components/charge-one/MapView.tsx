@@ -8,7 +8,6 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import { findStations } from '@/ai/flows/findStations';
 
 interface MapViewProps {
-    stations: Station[];
     onStationsLoaded: (stations: Station[]) => void;
     onSelectStation: (station: Station) => void;
     selectedStationId?: string | null;
@@ -27,7 +26,6 @@ const containerStyle = {
 const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "";
 
 export default function MapView({ 
-    stations, 
     onStationsLoaded, 
     onSelectStation, 
     selectedStationId,
@@ -40,10 +38,10 @@ export default function MapView({
     libraries: ['places', 'routes'],
   });
   
+  const [stations, setStations] = useState<Station[]>([]);
   const [error, setError] = useState<string | null>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const [currentCenter, setCurrentCenter] = useState(initialCenter);
 
   const fetchStationsForCenter = useCallback(async (center: { lat: number, lng: number }) => {
       try {
@@ -51,7 +49,10 @@ export default function MapView({
         
         const existingStationIds = new Set(stations.map(s => s.id));
         const newStations = fetchedStations.filter(s => !existingStationIds.has(s.id));
-        onStationsLoaded([...stations, ...newStations]);
+        
+        const allStations = [...stations, ...newStations]
+        setStations(allStations);
+        onStationsLoaded(allStations);
         setError(null);
       } catch (err) {
         console.error("Error fetching stations:", err);
@@ -69,7 +70,6 @@ export default function MapView({
             const newCenter = mapRef.current.getCenter();
             if (newCenter) {
                 const newCenterCoords = { lat: newCenter.lat(), lng: newCenter.lng() };
-                setCurrentCenter(newCenterCoords);
                 fetchStationsForCenter(newCenterCoords);
             }
         }
@@ -92,16 +92,16 @@ export default function MapView({
   }, []);
 
   useEffect(() => {
-    if (directions && mapRef.current && directions.routes && directions.routes.length > 0) {
+    if (directions && mapRef.current && directions.routes && directions.routes.length > 0 && window.google) {
         const route = directions.routes[0];
-        if (route.bounds && window.google && window.google.maps) {
-            const bounds = new window.google.maps.LatLngBounds();
-            if (route.overview_path) {
-              route.overview_path.forEach((p: any) => bounds.extend(p));
-            }
-            if (mapRef.current) {
-              mapRef.current.fitBounds(bounds);
-            }
+        if (route.bounds) {
+            const sw = route.bounds.southwest;
+            const ne = route.bounds.northeast;
+            const bounds = new window.google.maps.LatLngBounds(
+                new window.google.maps.LatLng(sw.lat, sw.lng),
+                new window.google.maps.LatLng(ne.lat, ne.lng)
+            );
+            mapRef.current.fitBounds(bounds);
         }
     }
   }, [directions]);
@@ -138,7 +138,7 @@ export default function MapView({
         <CardContent className="p-0 h-full">
              <GoogleMap
                 mapContainerStyle={containerStyle}
-                center={currentCenter}
+                center={initialCenter}
                 zoom={10}
                 onLoad={onLoad}
                 onIdle={onMapIdle}

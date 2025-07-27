@@ -30,6 +30,7 @@ function HomePageContent() {
   const [currentLocation, setCurrentLocation] = useState<{lat: number, lng: number} | null>(null);
   const [chargingStops, setChargingStops] = useState<Station[]>([]);
   const [locationError, setLocationError] = useState<string | null>(null);
+  const [isLocationReady, setIsLocationReady] = useState(false);
 
 
   const { toast } = useToast();
@@ -52,14 +53,17 @@ function HomePageContent() {
           lng: position.coords.longitude
         });
         setLocationError(null);
+        setIsLocationReady(true);
       }, (error) => {
         console.error("Geolocation error:", error);
         setLocationError("Could not get your location. Please enable location services. Using a default location.");
         setCurrentLocation({ lat: 11.1271, lng: 78.6569 }); // Fallback to Tamil Nadu
+        setIsLocationReady(true);
       });
     } else {
       setLocationError("Geolocation is not supported by this browser. Using a default location.");
       setCurrentLocation({ lat: 11.1271, lng: 78.6569 });
+      setIsLocationReady(true);
     }
   }, []);
 
@@ -132,16 +136,18 @@ function HomePageContent() {
 
   const handlePlanRoute = async (origin: string, destination: string) => {
     let startPoint = origin;
-    if (!startPoint) {
-        if (!currentLocation) {
-            toast({ 
-                variant: "destructive", 
-                title: "Location Unavailable", 
-                description: "Your current location isn't available yet. Please enter a starting point or wait a moment." 
-            });
-            return;
-        }
+    // This check is now robust because the button is disabled until location is ready
+    if (!startPoint && currentLocation) {
         startPoint = `${currentLocation.lat},${currentLocation.lng}`;
+    }
+
+    if (!startPoint) {
+        toast({ 
+            variant: "destructive", 
+            title: "Starting Point Unavailable", 
+            description: "Your current location isn't available. Please enter a starting point." 
+        });
+        return;
     }
 
     if (!destination) {
@@ -165,6 +171,7 @@ function HomePageContent() {
         } else {
             setDirections(result.directions);
             if (result.chargingStops && result.chargingStops.length > 0) {
+                setStations(prevStations => [...prevStations, ...result.chargingStops!]);
                 setChargingStops(result.chargingStops);
             }
             if (result.errorMessage) {
@@ -211,7 +218,7 @@ function HomePageContent() {
           <div className="lg:col-span-2 flex flex-col gap-8">
             <WalletCard balance={walletBalance} onRecharge={() => setIsRechargeOpen(true)} />
             <VehicleStatusCard vehicle={userVehicle} />
-            <RoutePlanner onPlanRoute={handlePlanRoute} isPlanning={isPlanningRoute} />
+            <RoutePlanner onPlanRoute={handlePlanRoute} isPlanning={isPlanningRoute || !isLocationReady} />
             {selectedStation && (
                 <ChargingSession
                 station={selectedStation}
@@ -223,7 +230,6 @@ function HomePageContent() {
           </div>
           <div className="lg:col-span-3">
             <MapView 
-              stations={stations}
               onStationsLoaded={setStations}
               onSelectStation={handleSelectStation}
               selectedStationId={selectedStation?.id}
