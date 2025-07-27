@@ -200,6 +200,7 @@ export default function MapView({ onStationsFound, stations, onStationClick, rou
                             strokeColor: '#ffffff',
                             strokeWeight: 2,
                             scale: 12,
+                            anchor: new google.maps.Point(0, 0),
                         }}
                     />
                 )}
