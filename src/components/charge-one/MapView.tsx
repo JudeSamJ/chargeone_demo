@@ -139,11 +139,15 @@ export default function MapView({ onStationsFound, stations, onStationClick, rou
                         key={station.id}
                         position={{ lat: station.lat, lng: station.lng }}
                         title={station.name}
-                        icon={{
-                            url: station.isAvailable ? '/green-dot.png' : '/red-dot.png',
-                            scaledSize: new google.maps.Size(20, 20),
-                        }}
                         onClick={() => onStationClick(station)}
+                        icon={{
+                            path: google.maps.SymbolPath.CIRCLE,
+                            fillColor: station.isAvailable ? '#10B981' : '#EF4444', // Green for available, Red for not
+                            fillOpacity: 1,
+                            strokeColor: '#ffffff',
+                            strokeWeight: 1.5,
+                            scale: 7,
+                        }}
                     />
                 ))}
 
