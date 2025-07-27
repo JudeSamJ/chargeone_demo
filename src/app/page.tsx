@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, Suspense, useEffect } from 'react';
@@ -17,6 +18,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Skeleton } from '@/components/ui/skeleton';
 import { rechargeWallet } from '@/ai/flows/rechargeWallet';
 import { planRoute } from '@/ai/flows/planRoute';
+import type { PlanRouteOutput } from '@/ai/flows/planRoute';
 
 function HomePageContent() {
   const [stations, setStations] = useState<Station[]>([]);
@@ -152,7 +154,7 @@ function HomePageContent() {
     setChargingStops([]);
     
     try {
-        const result = await planRoute({
+        const result: PlanRouteOutput = await planRoute({
             origin: startPoint,
             destination,
             vehicle: userVehicle,

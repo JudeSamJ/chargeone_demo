@@ -94,10 +94,14 @@ export default function MapView({
   useEffect(() => {
     if (directions && mapRef.current && directions.routes && directions.routes.length > 0) {
         const route = directions.routes[0];
-        if (route.bounds && window.google) {
+        if (route.bounds && window.google && window.google.maps) {
             const bounds = new window.google.maps.LatLngBounds();
-            bounds.union(route.bounds);
-            mapRef.current.fitBounds(bounds);
+            if (route.overview_path) {
+              route.overview_path.forEach((p: any) => bounds.extend(p));
+            }
+            if (mapRef.current) {
+              mapRef.current.fitBounds(bounds);
+            }
         }
     }
   }, [directions]);
