@@ -107,10 +107,6 @@ function HomePageContent() {
     }
   };
 
-  const onStationsFound = useCallback((foundStations: Station[]) => {
-    setStations(foundStations);
-  }, []);
-
   if (loading || (!user && !isGuest) || !userVehicle) {
     return (
         <div className="relative h-screen w-screen">
@@ -136,13 +132,7 @@ function HomePageContent() {
         isRechargeOpen={isRechargeOpen}
         handleRecharge={handleRecharge}
       />
-      <MapView 
-        stations={stations} 
-        onStationSelect={handleStationSelect} 
-        onStationsFound={onStationsFound}
-        selectedStation={selectedStation}
-        route={route}
-      />
+      <MapView />
       <Toaster />
     </div>
   );
