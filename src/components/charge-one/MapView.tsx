@@ -36,6 +36,7 @@ export default function MapView({ stations, selectedStation, onStationSelect, on
     const [currentLocation, setCurrentLocation] = useState<google.maps.LatLngLiteral | null>(null);
 
     const searchForStations = useCallback(async (location: { lat: number, lng: number }) => {
+        // Do not search for stations if a route is being displayed
         if (route) return; 
         try {
             const foundStations = await findStations({

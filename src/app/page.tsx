@@ -49,12 +49,10 @@ function HomePageContent() {
   
   const handleStationSelect = (station: Station | null) => {
     setSelectedStation(station);
-    if (!station) {
-       // Only clear the route if the user is deselecting a station,
-       // not when the route itself is being planned.
-       if(!isPlanningRoute) {
-         setRoute(null);
-       }
+    if (!station && !route) {
+       // Only clear the route if the user is deselecting a station
+       // AND there is no active route being displayed.
+       setRoute(null);
     }
   };
 
