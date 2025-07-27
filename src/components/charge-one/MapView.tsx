@@ -40,47 +40,83 @@ export default function MapView({ onStationsFound, stations, onStationClick, rou
     const { toast } = useToast();
     const mapRef = useRef<google.maps.Map | null>(null);
     const { theme } = useTheme();
+    const stationsFetchedRef = useRef(false);
 
     const onMapLoad = useCallback((map: google.maps.Map) => {
         mapRef.current = map;
+    }, []);
+
+    useEffect(() => {
+        if (!isLoaded) return;
+
+        let watchId: number;
+
         if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(
+            watchId = navigator.geolocation.watchPosition(
                 (position) => {
                     const currentPosition = {
                         lat: position.coords.latitude,
                         lng: position.coords.longitude,
                     };
                     setCurrentLocation(currentPosition);
-                    setCenter(currentPosition);
-                    map.panTo(currentPosition);
-                    map.setZoom(14);
-                    findStations({ latitude: currentPosition.lat, longitude: currentPosition.lng, radius: 10000 })
-                        .then(onStationsFound)
-                        .catch(err => {
-                            console.error("Error finding stations:", err);
-                            toast({ variant: 'destructive', title: 'Could not find nearby stations.'});
-                        });
+                    
+                    // Only pan to location if not actively viewing a route
+                    if (!route) {
+                        setCenter(currentPosition);
+                        if(mapRef.current) {
+                           mapRef.current.panTo(currentPosition);
+                        }
+                    }
+
+                    // Fetch initial stations only once
+                    if (!stationsFetchedRef.current) {
+                        stationsFetchedRef.current = true;
+                        findStations({ latitude: currentPosition.lat, longitude: currentPosition.lng, radius: 10000 })
+                            .then(onStationsFound)
+                            .catch(err => {
+                                console.error("Error finding stations:", err);
+                                toast({ variant: 'destructive', title: 'Could not find nearby stations.'});
+                            });
+                    }
                 },
                 () => {
                     toast({ title: 'Could not get your location. Showing default.' });
-                    findStations({ latitude: defaultCenter.lat, longitude: defaultCenter.lng, radius: 10000 })
-                       .then(onStationsFound)
-                       .catch(err => {
-                           console.error("Error finding stations:", err);
-                           toast({ variant: 'destructive', title: 'Could not find stations near default location.'});
-                       });
+                     if (!stationsFetchedRef.current) {
+                        stationsFetchedRef.current = true;
+                        findStations({ latitude: defaultCenter.lat, longitude: defaultCenter.lng, radius: 10000 })
+                           .then(onStationsFound)
+                           .catch(err => {
+                               console.error("Error finding stations:", err);
+                               toast({ variant: 'destructive', title: 'Could not find stations near default location.'});
+                           });
+                    }
+                },
+                {
+                    enableHighAccuracy: true,
+                    timeout: 10000,
+                    maximumAge: 0,
                 }
             );
         } else {
              toast({ title: 'Geolocation not supported. Showing default location.' });
-             findStations({ latitude: defaultCenter.lat, longitude: defaultCenter.lng, radius: 10000 })
-                .then(onStationsFound)
-                .catch(err => {
-                    console.error("Error finding stations:", err);
-                    toast({ variant: 'destructive', title: 'Could not find stations near default location.'});
-                });
+             if (!stationsFetchedRef.current) {
+                stationsFetchedRef.current = true;
+                findStations({ latitude: defaultCenter.lat, longitude: defaultCenter.lng, radius: 10000 })
+                    .then(onStationsFound)
+                    .catch(err => {
+                        console.error("Error finding stations:", err);
+                        toast({ variant: 'destructive', title: 'Could not find stations near default location.'});
+                    });
+            }
         }
-    }, [onStationsFound, toast]);
+
+        return () => {
+            if (watchId) {
+                navigator.geolocation.clearWatch(watchId);
+            }
+        };
+    }, [isLoaded, onStationsFound, toast, route]);
+
 
     useEffect(() => {
         if (route && mapRef.current && isLoaded) {
@@ -140,7 +176,7 @@ export default function MapView({ onStationsFound, stations, onStationClick, rou
         <GoogleMap
             mapContainerStyle={mapContainerStyle}
             center={center}
-            zoom={12}
+            zoom={14}
             onLoad={onMapLoad}
             options={{
                 disableDefaultUI: true,
@@ -151,7 +187,7 @@ export default function MapView({ onStationsFound, stations, onStationClick, rou
         >
             {isLoaded && (
               <>
-                {currentLocation && !route && (
+                {currentLocation && (
                   <MarkerF
                       position={currentLocation}
                       title="Your Location"
