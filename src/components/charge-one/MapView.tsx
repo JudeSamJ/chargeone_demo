@@ -142,7 +142,7 @@ export default function MapView({ onStationsFound, stations, onStationClick, rou
                         onClick={() => onStationClick(station)}
                         icon={{
                             path: google.maps.SymbolPath.CIRCLE,
-                            fillColor: station.isAvailable ? '#10B981' : '#EF4444', // Green for available, Red for not
+                            fillColor: station.isAvailable ? '#10B981' : '#808080',
                             fillOpacity: 1,
                             strokeColor: '#ffffff',
                             strokeWeight: 1.5,
