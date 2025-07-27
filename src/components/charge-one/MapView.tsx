@@ -35,6 +35,7 @@ export default function MapView({ onStationsFound, stations, onStationClick, rou
     });
 
     const [center, setCenter] = useState(defaultCenter);
+    const [currentLocation, setCurrentLocation] = useState(defaultCenter);
     const { toast } = useToast();
     const mapRef = useRef<google.maps.Map | null>(null);
     const { theme } = useTheme();
@@ -49,6 +50,7 @@ export default function MapView({ onStationsFound, stations, onStationClick, rou
                         lng: position.coords.longitude,
                     };
                     setCenter(currentPosition);
+                    setCurrentLocation(currentPosition);
                     map.panTo(currentPosition);
                     map.setZoom(14);
                     findStations({ latitude: currentPosition.lat, longitude: currentPosition.lng, radius: 10000 })
@@ -120,7 +122,7 @@ export default function MapView({ onStationsFound, stations, onStationClick, rou
               <>
                 {/* Marker for current location */}
                 <MarkerF
-                    position={center}
+                    position={currentLocation}
                     title="Your Location"
                     icon={{
                         path: google.maps.SymbolPath.CIRCLE,
