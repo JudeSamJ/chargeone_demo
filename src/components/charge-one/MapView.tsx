@@ -22,10 +22,26 @@ const center = {
 };
 
 export default function MapView({ stations, onSelectStation, selectedStationId }: MapViewProps) {
-  const { isLoaded } = useJsApiLoader({
+  const { isLoaded, loadError } = useJsApiLoader({
     id: 'google-map-script',
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ""
   })
+
+  if (loadError) {
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle>Nearby Stations Map</CardTitle>
+            </CardHeader>
+            <CardContent>
+                <div style={containerStyle} className="bg-destructive/20 text-destructive border border-destructive rounded-lg flex flex-col items-center justify-center text-center p-4">
+                    <p className="font-medium">Map Error</p>
+                    <p className="text-sm">Could not load Google Maps. Please ensure you have a valid <code className="bg-destructive/20 p-1 rounded">NEXT_PUBLIC_GOOGLE_MAPS_API_KEY</code> in your .env.local file and have enabled the Maps JavaScript API in the Google Cloud Console.</p>
+                </div>
+            </CardContent>
+        </Card>
+    );
+  }
 
   if (!isLoaded) {
     return (
