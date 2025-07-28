@@ -51,73 +51,42 @@ export default function MapView({ onStationsFound, stations, onStationClick, rou
 
     useEffect(() => {
         let watchId: number;
-
-        if (!isLoaded) return;
-
-        const handlePositionUpdate = (position: GeolocationPosition) => {
-            const currentPos = {
-                lat: position.coords.latitude,
-                lng: position.coords.longitude,
-            };
-            onLocationUpdate(currentPos);
-            if (!route) {
-                setCenter(currentPos);
-                 if (mapRef.current && mapRef.current.getZoom()! < 14) {
-                    mapRef.current.setZoom(14);
-                }
-            }
-            if (!stationsFetchedRef.current) {
-                stationsFetchedRef.current = true;
-                findStations({ latitude: currentPos.lat, longitude: currentPos.lng, radius: 10000 })
-                    .then(onStationsFound)
-                    .catch(err => {
-                        console.error("Error finding stations:", err);
-                        toast({ variant: 'destructive', title: 'Could not find nearby stations.'});
-                    });
-            }
-        };
-
-        const handleGeolocationError = (error: GeolocationPositionError) => {
-            let message = 'Could not get your location. Showing default.';
-            if (error.code === error.PERMISSION_DENIED) {
-                message = 'Location access denied. Please enable it in your browser settings.';
-            } else if (window.location.protocol !== 'https:') {
-                message = 'Live location is only available on secure (HTTPS) connections.';
-            }
-            console.error("Geolocation error:", error.message);
-            toast({ title: message });
-            if (!stationsFetchedRef.current) {
-                stationsFetchedRef.current = true;
-                findStations({ latitude: defaultCenter.lat, longitude: defaultCenter.lng, radius: 10000 })
-                    .then(onStationsFound)
-                    .catch(err => {
-                        console.error("Error finding stations:", err);
-                        toast({ variant: 'destructive', title: 'Could not find nearby stations.'});
-                    });
-            }
-        };
-        
         if (navigator.geolocation) {
-            navigator.permissions.query({ name: 'geolocation' }).then(permissionStatus => {
-                if (permissionStatus.state === 'granted' || permissionStatus.state === 'prompt') {
-                    watchId = navigator.geolocation.watchPosition(
-                        handlePositionUpdate,
-                        handleGeolocationError,
-                        { enableHighAccuracy: true }
-                    );
-                } else {
-                     handleGeolocationError({ code: 1, message: 'Permission denied.' } as GeolocationPositionError);
-                }
-
-                permissionStatus.onchange = () => {
-                    if (permissionStatus.state === 'granted') {
-                        if (watchId) navigator.geolocation.clearWatch(watchId);
-                        watchId = navigator.geolocation.watchPosition(handlePositionUpdate, handleGeolocationError, { enableHighAccuracy: true });
-                    } else {
-                        handleGeolocationError({ code: 1, message: 'Permission denied.' } as GeolocationPositionError);
+            watchId = navigator.geolocation.watchPosition(
+                (position) => {
+                    const currentPos = {
+                        lat: position.coords.latitude,
+                        lng: position.coords.longitude,
+                    };
+                    onLocationUpdate(currentPos);
+                    if (!route) { // Only center on user if there's no active route
+                        setCenter(currentPos);
                     }
-                };
-            });
+                    if (!stationsFetchedRef.current) {
+                        stationsFetchedRef.current = true;
+                        findStations({ latitude: currentPos.lat, longitude: currentPos.lng, radius: 10000 })
+                            .then(onStationsFound)
+                            .catch(err => {
+                                console.error("Error finding stations:", err);
+                                toast({ variant: 'destructive', title: 'Could not find nearby stations.'});
+                            });
+                    }
+                },
+                (error) => {
+                    console.error("Geolocation error:", error);
+                    toast({ title: 'Could not get your location. Showing default.' });
+                     if (!stationsFetchedRef.current) {
+                        stationsFetchedRef.current = true;
+                        findStations({ latitude: defaultCenter.lat, longitude: defaultCenter.lng, radius: 10000 })
+                            .then(onStationsFound)
+                            .catch(err => {
+                                console.error("Error finding stations:", err);
+                                toast({ variant: 'destructive', title: 'Could not find nearby stations.'});
+                            });
+                    }
+                },
+                { enableHighAccuracy: true }
+            );
         } else {
              toast({ title: 'Geolocation not supported. Showing default location.' });
              if (!stationsFetchedRef.current) {
