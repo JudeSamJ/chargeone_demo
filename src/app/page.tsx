@@ -13,7 +13,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { rechargeWallet } from '@/ai/flows/rechargeWallet';
 import { planRoute } from '@/ai/flows/planRoute';
 import Controls from '@/components/charge-one/Controls';
-import { SidebarProvider, Sidebar, SidebarInset, SidebarContent, SidebarTrigger } from '@/components/ui/sidebar';
+import { SidebarProvider, Sidebar, SidebarInset, SidebarContent, SidebarRail } from '@/components/ui/sidebar';
 import Header from '@/components/charge-one/Header';
 
 function HomePageContent() {
@@ -134,27 +134,28 @@ function HomePageContent() {
 
   return (
       <SidebarProvider>
-        <Sidebar>
-            <SidebarContent className="p-4">
-                <Controls
-                    userVehicle={userVehicle}
-                    walletBalance={walletBalance}
-                    setIsRechargeOpen={setIsRechargeOpen}
-                    selectedStation={selectedStation}
-                    handleEndSession={handleEndSession}
-                    handleStationSelect={handleStationSelect}
-                    handlePlanRoute={handlePlanRoute}
-                    isPlanningRoute={isPlanningRoute}
-                    isRechargeOpen={isRechargeOpen}
-                    handleRecharge={handleRecharge}
-                    currentLocation={currentLocation}
-                    hasRoute={!!route}
-                    onClearRoute={handleClearRoute}
-                />
-            </SidebarContent>
+        <Sidebar variant="floating" side="left">
+          <SidebarRail />
+          <SidebarContent className="p-4">
+              <Controls
+                  userVehicle={userVehicle}
+                  walletBalance={walletBalance}
+                  setIsRechargeOpen={setIsRechargeOpen}
+                  selectedStation={selectedStation}
+                  handleEndSession={handleEndSession}
+                  handleStationSelect={handleStationSelect}
+                  handlePlanRoute={handlePlanRoute}
+                  isPlanningRoute={isPlanningRoute}
+                  isRechargeOpen={isRechargeOpen}
+                  handleRecharge={handleRecharge}
+                  currentLocation={currentLocation}
+                  hasRoute={!!route}
+                  onClearRoute={handleClearRoute}
+              />
+          </SidebarContent>
         </Sidebar>
         <SidebarInset>
-            <Header />
+          <Header />
             <MapView 
                 onStationsFound={handleStationsFound} 
                 stations={stations}
