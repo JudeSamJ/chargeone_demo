@@ -13,7 +13,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { rechargeWallet } from '@/ai/flows/rechargeWallet';
 import { planRoute } from '@/ai/flows/planRoute';
 import Controls from '@/components/charge-one/Controls';
-import { SidebarProvider, Sidebar, SidebarInset, SidebarContent } from '@/components/ui/sidebar';
+import { SidebarProvider, Sidebar, SidebarInset, SidebarContent, SidebarTrigger } from '@/components/ui/sidebar';
+import Header from '@/components/charge-one/Header';
 
 function HomePageContent() {
   const [stations, setStations] = useState<Station[]>([]);
@@ -134,7 +135,7 @@ function HomePageContent() {
   return (
       <SidebarProvider>
         <Sidebar>
-            <SidebarContent>
+            <SidebarContent className="p-4">
                 <Controls
                     userVehicle={userVehicle}
                     walletBalance={walletBalance}
@@ -153,6 +154,7 @@ function HomePageContent() {
             </SidebarContent>
         </Sidebar>
         <SidebarInset>
+            <Header />
             <MapView 
                 onStationsFound={handleStationsFound} 
                 stations={stations}
