@@ -77,7 +77,9 @@ export default function MapView({ onStationsFound, stations, onStationClick, rou
                     mapRef.current.setZoom(14);
                 }
             }
-            fetchStations(currentPos.lat, currentPos.lng);
+            if (!stationsFetchedRef.current) {
+                fetchStations(currentPos.lat, currentPos.lng);
+            }
         };
 
         const handleGeolocationError = (error: GeolocationPositionError) => {
@@ -89,7 +91,9 @@ export default function MapView({ onStationsFound, stations, onStationClick, rou
             }
             console.error("Geolocation error:", error.message);
             toast({ title: message });
-            fetchStations(defaultCenter.lat, defaultCenter.lng);
+            if (!stationsFetchedRef.current) {
+                fetchStations(defaultCenter.lat, defaultCenter.lng);
+            }
         };
         
         if (navigator.geolocation) {
@@ -115,7 +119,9 @@ export default function MapView({ onStationsFound, stations, onStationClick, rou
             });
         } else {
              toast({ title: 'Geolocation not supported. Showing default location.' });
-             fetchStations(defaultCenter.lat, defaultCenter.lng);
+             if (!stationsFetchedRef.current) {
+                fetchStations(defaultCenter.lat, defaultCenter.lng);
+            }
         }
 
         return () => {
@@ -123,7 +129,7 @@ export default function MapView({ onStationsFound, stations, onStationClick, rou
                 navigator.geolocation.clearWatch(watchId);
             }
         };
-    }, [isLoaded, onLocationUpdate, onStationsFound, toast, route, fetchStations]);
+    }, [isLoaded, onLocationUpdate, toast, route, fetchStations]);
 
 
     useEffect(() => {
