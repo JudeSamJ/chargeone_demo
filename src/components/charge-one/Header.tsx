@@ -1,6 +1,7 @@
+
 "use client";
 
-import { Bolt, LogOut, User as UserIcon } from 'lucide-react';
+import { LogOut } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { signOutWithGoogle } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
@@ -15,6 +16,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '../ui/button';
 import { ThemeToggle } from './ThemeToggle';
+import { SidebarTrigger } from '../ui/sidebar';
 
 export default function Header() {
   const { user, loading } = useAuth();
@@ -39,11 +41,11 @@ export default function Header() {
   }
 
   return (
-    <header className="py-4 px-4 sm:px-6 lg:px-8 border-b bg-card">
+    <header className="py-2 px-4 sm:px-6 lg:px-8 border-b bg-background">
       <div className="flex items-center justify-between max-w-7xl mx-auto">
-        <div className="flex items-center gap-3">
-            <Bolt className="h-7 w-7 text-primary" />
-            <h1 className="text-2xl font-bold text-primary font-headline">ChargeOne</h1>
+        <div className="flex items-center gap-1">
+            <SidebarTrigger />
+            <span className="text-sm text-muted-foreground hidden md:inline-block">Press [⌘+B] to toggle</span>
         </div>
         <div className="flex items-center gap-2">
           <ThemeToggle />

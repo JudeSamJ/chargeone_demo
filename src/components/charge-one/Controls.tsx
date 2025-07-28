@@ -7,9 +7,10 @@ import VehicleStatusCard from "./VehicleStatusCard";
 import ChargingSession from "./ChargingSession";
 import RoutePlanner from "./RoutePlanner";
 import RechargeDialog from "./RechargeDialog";
-import Header from "./Header";
 import { Button } from "../ui/button";
 import { X } from "lucide-react";
+import { SidebarContent, SidebarHeader } from "../ui/sidebar";
+import { Bolt } from "lucide-react";
 
 interface ControlsProps {
     userVehicle: Vehicle;
@@ -43,9 +44,14 @@ export default function Controls({
     onClearRoute,
 }: ControlsProps) {
     return (
-        <div className="absolute top-0 left-0 z-10 h-screen w-full max-w-md flex flex-col">
-            <Header />
-            <div className="flex-grow overflow-y-auto p-4 flex flex-col gap-4 bg-background/80 backdrop-blur-sm">
+        <>
+            <SidebarHeader>
+                 <div className="flex items-center gap-3">
+                    <Bolt className="h-7 w-7 text-primary" />
+                    <h1 className="text-2xl font-bold text-primary font-headline">ChargeOne</h1>
+                </div>
+            </SidebarHeader>
+            <SidebarContent className="flex-grow overflow-y-auto p-4 flex flex-col gap-4">
                 <WalletCard balance={walletBalance} onRecharge={() => setIsRechargeOpen(true)} />
                 <VehicleStatusCard vehicle={userVehicle} />
                 {selectedStation ? (
@@ -66,13 +72,13 @@ export default function Controls({
                 ) : (
                     <RoutePlanner onPlanRoute={handlePlanRoute} isPlanning={isPlanningRoute} currentLocation={currentLocation}/>
                 )}
-            </div>
+            </SidebarContent>
              <RechargeDialog 
                 isOpen={isRechargeOpen}
                 onOpenChange={setIsRechargeOpen}
                 onRecharge={handleRecharge}
                 razorpayKeyId={process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID}
             />
-        </div>
+        </>
     );
 }

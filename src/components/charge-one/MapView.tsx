@@ -12,8 +12,11 @@ import { mapStylesDark } from '@/lib/map-styles-dark';
 
 
 const mapContainerStyle = {
-  width: '100vw',
-  height: '100vh',
+  position: 'absolute' as const,
+  width: '100%',
+  height: '100%',
+  top: 0,
+  left: 0,
 };
 
 const defaultCenter = {
@@ -47,7 +50,7 @@ export default function MapView({ onStationsFound, stations, onStationClick, rou
         mapRef.current = map;
     }, []);
 
-    useEffect(() => {
+     useEffect(() => {
         let watchId: number;
 
         if (navigator.geolocation && isLoaded) {
@@ -172,13 +175,13 @@ export default function MapView({ onStationsFound, stations, onStationClick, rou
           strokeColor: '#000000',
           strokeWeight: 1,
           scale: 1.5,
-          anchor: new google.maps.Point(12, 12),
+          anchor: new google.maps.Point(12,12),
       }
     };
 
 
-    if (loadError) return <div className="flex items-center justify-center h-screen w-screen bg-muted rounded-lg"><p>Error loading map</p></div>;
-    if (!isLoaded) return <div className="flex items-center justify-center h-screen w-screen bg-muted rounded-lg"><p>Loading Map...</p></div>;
+    if (loadError) return <div className="flex items-center justify-center h-full w-full bg-muted rounded-lg"><p>Error loading map</p></div>;
+    if (!isLoaded) return <div className="flex items-center justify-center h-full w-full bg-muted rounded-lg"><p>Loading Map...</p></div>;
 
     return (
         <GoogleMap
@@ -246,4 +249,3 @@ export default function MapView({ onStationsFound, stations, onStationClick, rou
         </GoogleMap>
     );
 }
-
