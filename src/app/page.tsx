@@ -13,7 +13,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { rechargeWallet } from '@/ai/flows/rechargeWallet';
 import { planRoute } from '@/ai/flows/planRoute';
 import Controls from '@/components/charge-one/Controls';
-import { Sidebar, SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
+import { Sidebar, SidebarProvider, SidebarInset, SidebarRail } from '@/components/ui/sidebar';
 import Header from '@/components/charge-one/Header';
 
 function HomePageContent() {
@@ -135,7 +135,7 @@ function HomePageContent() {
   return (
     <div className="relative h-screen w-screen bg-background text-foreground">
       <SidebarProvider>
-         <Sidebar collapsible="icon">
+         <Sidebar collapsible="icon" variant="floating" side="left">
            <Controls
               userVehicle={userVehicle}
               walletBalance={walletBalance}
@@ -151,6 +151,7 @@ function HomePageContent() {
               hasRoute={!!route}
               onClearRoute={handleClearRoute}
             />
+            <SidebarRail />
          </Sidebar>
          <SidebarInset className="flex flex-col">
             <Header />
