@@ -40,7 +40,6 @@ export default function MapView({ onStationsFound, stations, onStationClick, rou
     });
     
     const [center, setCenter] = useState(defaultCenter);
-    const [destinationLocation, setDestinationLocation] = useState<google.maps.LatLngLiteral | null>(null);
     const { toast } = useToast();
     const mapRef = useRef<google.maps.Map | null>(null);
     const { theme } = useTheme();
@@ -50,62 +49,73 @@ export default function MapView({ onStationsFound, stations, onStationClick, rou
         mapRef.current = map;
     }, []);
 
+    const fetchStations = useCallback((lat: number, lng: number) => {
+        if (stationsFetchedRef.current) return;
+        stationsFetchedRef.current = true;
+        findStations({ latitude: lat, longitude: lng, radius: 10000 })
+            .then(onStationsFound)
+            .catch(err => {
+                console.error("Error finding stations:", err);
+                toast({ variant: 'destructive', title: 'Could not find nearby stations.'});
+            });
+    }, [onStationsFound, toast]);
+
      useEffect(() => {
         let watchId: number;
 
-        if (navigator.geolocation && isLoaded) {
-            watchId = navigator.geolocation.watchPosition(
-                (position) => {
-                    const currentPos = {
-                        lat: position.coords.latitude,
-                        lng: position.coords.longitude,
-                    };
-                    
-                    onLocationUpdate(currentPos);
+        if (!isLoaded) return;
 
-                    if (!route) {
-                        setCenter(currentPos);
-                        if (mapRef.current?.getZoom()! < 14) {
-                            mapRef.current?.setZoom(14);
-                        }
-                    }
+        const handlePositionUpdate = (position: GeolocationPosition) => {
+            const currentPos = {
+                lat: position.coords.latitude,
+                lng: position.coords.longitude,
+            };
+            onLocationUpdate(currentPos);
+            if (!route) {
+                setCenter(currentPos);
+                if (mapRef.current && mapRef.current.getZoom()! < 14) {
+                    mapRef.current.setZoom(14);
+                }
+            }
+            fetchStations(currentPos.lat, currentPos.lng);
+        };
 
-                     if (!stationsFetchedRef.current) {
-                        stationsFetchedRef.current = true;
-                        findStations({ latitude: currentPos.lat, longitude: currentPos.lng, radius: 10000 })
-                            .then(onStationsFound)
-                            .catch(err => {
-                                console.error("Error finding stations:", err);
-                                toast({ variant: 'destructive', title: 'Could not find nearby stations.'});
-                            });
+        const handleGeolocationError = (error: GeolocationPositionError) => {
+            let message = 'Could not get your location. Showing default.';
+            if (error.code === error.PERMISSION_DENIED) {
+                message = 'Location access denied. Please enable it in your browser settings.';
+            } else if (window.location.protocol !== 'https:') {
+                message = 'Live location is only available on secure (HTTPS) connections.';
+            }
+            console.error("Geolocation error:", error.message);
+            toast({ title: message });
+            fetchStations(defaultCenter.lat, defaultCenter.lng);
+        };
+        
+        if (navigator.geolocation) {
+            navigator.permissions.query({ name: 'geolocation' }).then(permissionStatus => {
+                if (permissionStatus.state === 'granted' || permissionStatus.state === 'prompt') {
+                    watchId = navigator.geolocation.watchPosition(
+                        handlePositionUpdate,
+                        handleGeolocationError,
+                        { enableHighAccuracy: true }
+                    );
+                } else {
+                     handleGeolocationError(new GeolocationPositionError());
+                }
+
+                permissionStatus.onchange = () => {
+                    if (permissionStatus.state === 'granted') {
+                        if (watchId) navigator.geolocation.clearWatch(watchId);
+                        watchId = navigator.geolocation.watchPosition(handlePositionUpdate, handleGeolocationError, { enableHighAccuracy: true });
+                    } else {
+                        handleGeolocationError(new GeolocationPositionError());
                     }
-                },
-                (error) => {
-                    console.error("Geolocation error:", error);
-                    toast({ title: 'Could not get your location. Showing default.' });
-                     if (!stationsFetchedRef.current) {
-                        stationsFetchedRef.current = true;
-                        findStations({ latitude: defaultCenter.lat, longitude: defaultCenter.lng, radius: 10000 })
-                           .then(onStationsFound)
-                           .catch(err => {
-                               console.error("Error finding stations:", err);
-                               toast({ variant: 'destructive', title: 'Could not find stations near default location.'});
-                           });
-                    }
-                },
-                { enableHighAccuracy: true }
-            );
+                };
+            });
         } else {
              toast({ title: 'Geolocation not supported. Showing default location.' });
-             if (!stationsFetchedRef.current) {
-                stationsFetchedRef.current = true;
-                findStations({ latitude: defaultCenter.lat, longitude: defaultCenter.lng, radius: 10000 })
-                    .then(onStationsFound)
-                    .catch(err => {
-                        console.error("Error finding stations:", err);
-                        toast({ variant: 'destructive', title: 'Could not find stations near default location.'});
-                    });
-            }
+             fetchStations(defaultCenter.lat, defaultCenter.lng);
         }
 
         return () => {
@@ -113,23 +123,13 @@ export default function MapView({ onStationsFound, stations, onStationClick, rou
                 navigator.geolocation.clearWatch(watchId);
             }
         };
-    }, [isLoaded, onLocationUpdate, onStationsFound, toast, route]);
+    }, [isLoaded, onLocationUpdate, onStationsFound, toast, route, fetchStations]);
 
 
     useEffect(() => {
         if (route && mapRef.current && isLoaded) {
             const bounds = new google.maps.LatLngBounds();
-            const routeLeg = route.routes[0]?.legs[0];
-
-            if (routeLeg?.end_location) {
-                setDestinationLocation({
-                    lat: routeLeg.end_location.lat,
-                    lng: routeLeg.end_location.lng,
-                });
-            } else {
-                setDestinationLocation(null);
-            }
-
+            
             if (route.routes[0]?.bounds) {
                 const routeBounds = route.routes[0].bounds;
                 const ne = routeBounds.northeast;
@@ -143,8 +143,6 @@ export default function MapView({ onStationsFound, stations, onStationClick, rou
             if (!bounds.isEmpty()) {
               mapRef.current.fitBounds(bounds);
             }
-        } else {
-            setDestinationLocation(null);
         }
     }, [route, isLoaded]);
 
@@ -167,18 +165,26 @@ export default function MapView({ onStationsFound, stations, onStationClick, rou
     };
 
     const getDestinationMarkerIcon = () => {
-      if (!isLoaded) return null;
+      if (!isLoaded || !route) return null;
+      
+      const routeLeg = route.routes[0]?.legs[0];
+      if (!routeLeg?.end_location) return null;
+
       return {
-          path: 'M12 2L4.5 20.29l.71.71L12 18l6.79 3 .71-.71z', // A simple star shape
-          fillColor: '#FFD700', // Gold
-          fillOpacity: 1,
-          strokeColor: '#000000',
-          strokeWeight: 1,
-          scale: 1.5,
-          anchor: new google.maps.Point(12,12),
+          position: routeLeg.end_location,
+          icon: {
+            path: 'M12 2L4.5 20.29l.71.71L12 18l6.79 3 .71-.71z', 
+            fillColor: '#FFD700',
+            fillOpacity: 1,
+            strokeColor: '#000000',
+            strokeWeight: 1,
+            scale: 1.5,
+            anchor: new google.maps.Point(12, 12),
+        }
       }
     };
 
+    const destinationMarker = getDestinationMarkerIcon();
 
     if (loadError) return <div className="flex items-center justify-center h-full w-full bg-muted rounded-lg"><p>Error loading map</p></div>;
     if (!isLoaded) return <div className="flex items-center justify-center h-full w-full bg-muted rounded-lg"><p>Loading Map...</p></div>;
@@ -236,11 +242,11 @@ export default function MapView({ onStationsFound, stations, onStationClick, rou
                   />
                 )}
                 
-                {destinationLocation && (
+                {destinationMarker && (
                     <MarkerF
-                        position={destinationLocation}
+                        position={destinationMarker.position}
                         title="Destination"
-                        icon={getDestinationMarkerIcon()!}
+                        icon={destinationMarker.icon}
                     />
                 )}
                 
@@ -249,3 +255,5 @@ export default function MapView({ onStationsFound, stations, onStationClick, rou
         </GoogleMap>
     );
 }
+
+    
