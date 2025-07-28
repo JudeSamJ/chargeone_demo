@@ -1,16 +1,16 @@
 
 "use client";
 
+import { useState } from 'react';
 import { Station, Vehicle } from "@/lib/types";
 import WalletCard from "./WalletCard";
 import VehicleStatusCard from "./VehicleStatusCard";
 import ChargingSession from "./ChargingSession";
 import RoutePlanner from "./RoutePlanner";
 import RechargeDialog from "./RechargeDialog";
-import { Button } from "../ui/button";
-import { X } from "lucide-react";
-import { SidebarContent, SidebarHeader } from "../ui/sidebar";
-import { Bolt } from "lucide-react";
+import { Card } from '../ui/card';
+import { Button } from '../ui/button';
+import { X } from 'lucide-react';
 
 interface ControlsProps {
     userVehicle: Vehicle;
@@ -45,13 +45,7 @@ export default function Controls({
 }: ControlsProps) {
     return (
         <>
-            <SidebarHeader>
-                 <div className="flex items-center gap-3">
-                    <Bolt className="h-7 w-7 text-primary" />
-                    <h1 className="text-2xl font-bold text-primary font-headline">ChargeOne</h1>
-                </div>
-            </SidebarHeader>
-            <SidebarContent className="flex-grow overflow-y-auto p-4 flex flex-col gap-4">
+            <div className="absolute top-20 left-4 z-10 w-full max-w-sm space-y-4">
                 <WalletCard balance={walletBalance} onRecharge={() => setIsRechargeOpen(true)} />
                 <VehicleStatusCard vehicle={userVehicle} />
                 {selectedStation ? (
@@ -62,17 +56,17 @@ export default function Controls({
                         vehicle={userVehicle}
                     />
                 ) : hasRoute ? (
-                     <div className="p-4 rounded-lg bg-card text-card-foreground shadow-sm text-center">
+                     <Card className="p-4 text-center">
                         <p className="font-medium">A route is active.</p>
                         <p className="text-sm text-muted-foreground mb-4">Charging stations along your path are shown on the map.</p>
                         <Button variant="outline" onClick={onClearRoute} className="w-full">
                            <X className="mr-2 h-4 w-4" /> Clear Route
                         </Button>
-                    </div>
+                    </Card>
                 ) : (
                     <RoutePlanner onPlanRoute={handlePlanRoute} isPlanning={isPlanningRoute} currentLocation={currentLocation}/>
                 )}
-            </SidebarContent>
+            </div>
              <RechargeDialog 
                 isOpen={isRechargeOpen}
                 onOpenChange={setIsRechargeOpen}

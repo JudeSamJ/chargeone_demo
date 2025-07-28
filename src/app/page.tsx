@@ -13,8 +13,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { rechargeWallet } from '@/ai/flows/rechargeWallet';
 import { planRoute } from '@/ai/flows/planRoute';
 import Controls from '@/components/charge-one/Controls';
-import { Sidebar, SidebarProvider, SidebarInset, SidebarRail } from '@/components/ui/sidebar';
 import Header from '@/components/charge-one/Header';
+import { SidebarProvider } from '../components/ui/sidebar';
 
 function HomePageContent() {
   const [stations, setStations] = useState<Station[]>([]);
@@ -133,42 +133,34 @@ function HomePageContent() {
   }
 
   return (
-    <div className="relative h-screen w-screen bg-background text-foreground">
-      <SidebarProvider>
-         <Sidebar collapsible="icon" variant="floating" side="left">
-           <Controls
-              userVehicle={userVehicle}
-              walletBalance={walletBalance}
-              setIsRechargeOpen={setIsRechargeOpen}
-              selectedStation={selectedStation}
-              handleEndSession={handleEndSession}
-              handleStationSelect={handleStationSelect}
-              handlePlanRoute={handlePlanRoute}
-              isPlanningRoute={isPlanningRoute}
-              isRechargeOpen={isRechargeOpen}
-              handleRecharge={handleRecharge}
-              currentLocation={currentLocation}
-              hasRoute={!!route}
-              onClearRoute={handleClearRoute}
-            />
-            <SidebarRail />
-         </Sidebar>
-         <SidebarInset className="flex flex-col">
-            <Header />
-            <div className="relative flex-grow">
-               <MapView 
-                  onStationsFound={handleStationsFound} 
-                  stations={stations}
-                  onStationClick={handleStationSelect}
-                  route={route}
-                  onLocationUpdate={setCurrentLocation}
-                  currentLocation={currentLocation}
-                />
-            </div>
-         </SidebarInset>
-      </SidebarProvider>
-      <Toaster />
-    </div>
+    <SidebarProvider>
+      <div className="relative h-screen w-screen bg-background text-foreground">
+        <Header />
+        <Controls
+            userVehicle={userVehicle}
+            walletBalance={walletBalance}
+            setIsRechargeOpen={setIsRechargeOpen}
+            selectedStation={selectedStation}
+            handleEndSession={handleEndSession}
+            handleStationSelect={handleStationSelect}
+            handlePlanRoute={handlePlanRoute}
+            isPlanningRoute={isPlanningRoute}
+            isRechargeOpen={isRechargeOpen}
+            handleRecharge={handleRecharge}
+            currentLocation={currentLocation}
+            hasRoute={!!route}
+            onClearRoute={handleClearRoute}
+        />
+        <MapView 
+            onStationsFound={handleStationsFound} 
+            stations={stations}
+            onStationClick={handleStationSelect}
+            route={route}
+            onLocationUpdate={setCurrentLocation}
+        />
+        <Toaster />
+      </div>
+    </SidebarProvider>
   );
 }
 
