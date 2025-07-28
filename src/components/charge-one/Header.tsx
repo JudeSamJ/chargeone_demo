@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from 'react';
@@ -23,6 +24,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ThemeToggle } from './ThemeToggle';
+import { SidebarTrigger } from '../ui/sidebar';
 
 
 interface ControlsProps {
@@ -84,6 +86,7 @@ export default function Controls({
                     <div className="container mx-auto px-4 sm:px-6 lg:px-8">
                         <div className="flex items-center justify-between h-16">
                         <div className="flex items-center gap-3">
+                            <SidebarTrigger />
                             <Bolt className="h-7 w-7 text-primary" />
                             <h1 className="text-2xl font-bold text-primary font-headline">ChargeOne</h1>
                         </div>
