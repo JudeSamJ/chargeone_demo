@@ -13,8 +13,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { rechargeWallet } from '@/ai/flows/rechargeWallet';
 import { planRoute } from '@/ai/flows/planRoute';
 import Controls from '@/components/charge-one/Controls';
-import Header from '@/components/charge-one/Header';
-import { SidebarProvider } from '../components/ui/sidebar';
 
 function HomePageContent() {
   const [stations, setStations] = useState<Station[]>([]);
@@ -133,9 +131,7 @@ function HomePageContent() {
   }
 
   return (
-    <SidebarProvider>
       <div className="relative h-screen w-screen bg-background text-foreground">
-        <Header />
         <Controls
             userVehicle={userVehicle}
             walletBalance={walletBalance}
@@ -160,7 +156,6 @@ function HomePageContent() {
         />
         <Toaster />
       </div>
-    </SidebarProvider>
   );
 }
 
