@@ -62,7 +62,7 @@ export default function MapView({ onStationsFound, stations, onStationClick, rou
                     if (!route) { // Only center on user if there's no active route
                         setCenter(currentPos);
                     }
-                    if (!stationsFetchedRef.current) {
+                    if (!stationsFetchedRef.current && !route) {
                         stationsFetchedRef.current = true;
                         findStations({ latitude: currentPos.lat, longitude: currentPos.lng, radius: 10000 })
                             .then(onStationsFound)
@@ -75,7 +75,7 @@ export default function MapView({ onStationsFound, stations, onStationClick, rou
                 (error) => {
                     console.error("Geolocation error:", error);
                     toast({ title: 'Could not get your location. Showing default.' });
-                     if (!stationsFetchedRef.current) {
+                     if (!stationsFetchedRef.current && !route) {
                         stationsFetchedRef.current = true;
                         findStations({ latitude: defaultCenter.lat, longitude: defaultCenter.lng, radius: 10000 })
                             .then(onStationsFound)
@@ -89,7 +89,7 @@ export default function MapView({ onStationsFound, stations, onStationClick, rou
             );
         } else {
              toast({ title: 'Geolocation not supported. Showing default location.' });
-             if (!stationsFetchedRef.current) {
+             if (!stationsFetchedRef.current && !route) {
                 stationsFetchedRef.current = true;
                 findStations({ latitude: defaultCenter.lat, longitude: defaultCenter.lng, radius: 10000 })
                     .then(onStationsFound)
@@ -155,13 +155,13 @@ export default function MapView({ onStationsFound, stations, onStationClick, rou
       return {
           position: routeLeg.end_location,
           icon: {
-            path: 'M12 2L4.5 20.29l.71.71L12 18l6.79 3 .71-.71z', 
-            fillColor: '#FFD700',
+            path: 'M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z',
+            fillColor: '#EA4335',
             fillOpacity: 1,
-            strokeColor: '#000000',
-            strokeWeight: 1,
-            scale: 1.5,
-            anchor: new google.maps.Point(12, 12),
+            strokeColor: '#ffffff',
+            strokeWeight: 1.5,
+            scale: 2,
+            anchor: new google.maps.Point(12, 24),
         }
       }
     };
