@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from 'react';
@@ -12,6 +13,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useToast } from '@/hooks/use-toast';
 
 interface RechargeDialogProps {
   isOpen: boolean;
@@ -24,11 +26,16 @@ declare const Razorpay: any;
 
 export default function RechargeDialog({ isOpen, onOpenChange, onRecharge, razorpayKeyId }: RechargeDialogProps) {
   const [amount, setAmount] = useState('');
+  const { toast } = useToast();
 
   const handleRechargeClick = () => {
     const rechargeAmount = parseFloat(amount);
     if (!razorpayKeyId || isNaN(rechargeAmount) || rechargeAmount <= 0) {
-      // You might want to show an error toast here
+      toast({
+        variant: "destructive",
+        title: "Invalid Amount",
+        description: "Please enter a valid amount to recharge.",
+      });
       return;
     }
 
@@ -40,9 +47,6 @@ export default function RechargeDialog({ isOpen, onOpenChange, onRecharge, razor
       description: "Recharge your wallet",
       image: "https://placehold.co/100x100.png", // Replace with your logo
       handler: function (response: any) {
-        // This function is called upon successful payment.
-        // In a real app, you'd send response.razorpay_payment_id to your server
-        // to verify the payment signature. For this demo, we'll directly update the wallet.
         console.log("Razorpay Response:", response);
         onRecharge(rechargeAmount);
         setAmount('');
@@ -63,14 +67,23 @@ export default function RechargeDialog({ isOpen, onOpenChange, onRecharge, razor
     try {
         const rzp1 = new Razorpay(options);
         rzp1.on('payment.failed', function (response: any){
-            // You can show a toast with an error message here
             console.error("Payment Failed:", response);
-            alert(`Payment Failed: ${response.error.description}`);
+            if (response.error && response.error.description) {
+               toast({
+                   variant: "destructive",
+                   title: "Payment Failed",
+                   description: response.error.description,
+               });
+            }
         });
         rzp1.open();
     } catch (error) {
         console.error("Error initializing Razorpay", error);
-        alert("Could not initialize payment flow. Please try again.");
+        toast({
+            variant: "destructive",
+            title: "Error",
+            description: "Could not initialize payment flow. Please try again.",
+        });
     }
   };
 
@@ -116,7 +129,7 @@ export default function RechargeDialog({ isOpen, onOpenChange, onRecharge, razor
             type="submit" 
             onClick={handleRechargeClick} 
             className="w-full" 
-            disabled={!razorpayKeyId || parseFloat(amount) <= 0}
+            disabled={!razorpayKeyId || parseFloat(amount) <= 0 || isNaN(parseFloat(amount))}
           >
             Recharge with Razorpay
           </Button>
