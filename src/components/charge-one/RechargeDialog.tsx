@@ -28,6 +28,7 @@ export default function RechargeDialog({ isOpen, onOpenChange, onRecharge, razor
   const handleRechargeClick = () => {
     const rechargeAmount = parseFloat(amount);
     if (!razorpayKeyId || isNaN(rechargeAmount) || rechargeAmount <= 0) {
+      // You might want to show an error toast here
       return;
     }
 
@@ -39,8 +40,10 @@ export default function RechargeDialog({ isOpen, onOpenChange, onRecharge, razor
       description: "Recharge your wallet",
       image: "https://placehold.co/100x100.png", // Replace with your logo
       handler: function (response: any) {
-        // This function is called upon successful payment
-        // You would typically verify the payment signature on your server here
+        // This function is called upon successful payment.
+        // In a real app, you'd send response.razorpay_payment_id to your server
+        // to verify the payment signature. For this demo, we'll directly update the wallet.
+        console.log("Razorpay Response:", response);
         onRecharge(rechargeAmount);
         setAmount('');
       },
@@ -50,15 +53,25 @@ export default function RechargeDialog({ isOpen, onOpenChange, onRecharge, razor
         contact: "9999999999"
       },
       notes: {
-        address: "Razorpay Corporate Office"
+        address: "ChargeOne Corporate Office"
       },
       theme: {
         color: "#3399cc"
       }
     };
     
-    const rzp1 = new Razorpay(options);
-    rzp1.open();
+    try {
+        const rzp1 = new Razorpay(options);
+        rzp1.on('payment.failed', function (response: any){
+            // You can show a toast with an error message here
+            console.error("Payment Failed:", response);
+            alert(`Payment Failed: ${response.error.description}`);
+        });
+        rzp1.open();
+    } catch (error) {
+        console.error("Error initializing Razorpay", error);
+        alert("Could not initialize payment flow. Please try again.");
+    }
   };
 
   const quickAmounts = [500, 1000, 2000];
@@ -99,7 +112,12 @@ export default function RechargeDialog({ isOpen, onOpenChange, onRecharge, razor
           </div>
         </div>
         <DialogFooter>
-          <Button type="submit" onClick={handleRechargeClick} className="w-full" disabled={!razorpayKeyId}>
+          <Button 
+            type="submit" 
+            onClick={handleRechargeClick} 
+            className="w-full" 
+            disabled={!razorpayKeyId || parseFloat(amount) <= 0}
+          >
             Recharge with Razorpay
           </Button>
           {!razorpayKeyId && <p className="text-xs text-destructive text-center w-full">Razorpay Key ID not configured.</p>}

@@ -10,7 +10,6 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Skeleton } from '@/components/ui/skeleton';
-import { rechargeWallet } from '@/ai/flows/rechargeWallet';
 import { planRoute } from '@/ai/flows/planRoute';
 import Controls from '@/components/charge-one/Controls';
 import { SidebarProvider, Sidebar, SidebarInset, SidebarContent, SidebarRail } from '@/components/ui/sidebar';
@@ -60,30 +59,13 @@ function HomePageContent() {
     setSelectedStation(null);
   };
 
-  const handleRecharge = async (amount: number) => {
-    try {
-      const result = await rechargeWallet({ amount });
-      if (result.success) {
-        setWalletBalance((prev) => prev + amount);
-        setIsRechargeOpen(false);
-        toast({
-          title: "Recharge Successful",
-          description: result.message,
-        });
-      } else {
-        toast({
-          variant: "destructive",
-          title: "Recharge Failed",
-          description: result.message,
-        });
-      }
-    } catch (error) {
-       toast({
-          variant: "destructive",
-          title: "Recharge Error",
-          description: "An unexpected error occurred.",
-        });
-    }
+  const handleRecharge = (amount: number) => {
+    setWalletBalance((prev) => prev + amount);
+    setIsRechargeOpen(false);
+    toast({
+        title: "Recharge Successful",
+        description: `Successfully added ₹${amount.toFixed(2)} to your wallet.`,
+    });
   }
 
   const handlePlanRoute = async (origin: string, destination: string) => {
