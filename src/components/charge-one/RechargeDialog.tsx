@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
+import { useRazorpay } from '@/hooks/useRazorpay';
 
 interface RechargeDialogProps {
   isOpen: boolean;
@@ -21,11 +22,15 @@ interface RechargeDialogProps {
   razorpayKeyId?: string;
 }
 
-declare const Razorpay: any;
-
 export default function RechargeDialog({ isOpen, onOpenChange, onRecharge, razorpayKeyId }: RechargeDialogProps) {
   const [amount, setAmount] = useState('');
   const { toast } = useToast();
+  const [Razorpay, isLoaded] = useRazorpay();
+
+  useEffect(() => {
+    // This effect can be used to pre-load the script if needed,
+    // although the hook handles loading on first use.
+  }, [isOpen]);
 
   const handleRechargeClick = () => {
     const rechargeAmount = parseFloat(amount);
@@ -38,6 +43,15 @@ export default function RechargeDialog({ isOpen, onOpenChange, onRecharge, razor
       return;
     }
 
+    if (!isLoaded || !Razorpay) {
+        toast({
+            variant: "destructive",
+            title: "Error",
+            description: "Razorpay script not loaded yet. Please try again in a moment.",
+        });
+        return;
+    }
+
     const options = {
       key: razorpayKeyId,
       amount: rechargeAmount * 100, // Amount in paisa
@@ -46,9 +60,9 @@ export default function RechargeDialog({ isOpen, onOpenChange, onRecharge, razor
       description: "Recharge your wallet",
       image: "https://placehold.co/100x100.png", // Replace with your logo
       handler: function (response: any) {
-        console.log("Razorpay Response:", response);
         onRecharge(rechargeAmount);
         setAmount('');
+        onOpenChange(false);
       },
       prefill: {
         name: "Test User",
@@ -64,7 +78,7 @@ export default function RechargeDialog({ isOpen, onOpenChange, onRecharge, razor
     };
     
     try {
-        const rzp1 = new Razorpay(options);
+        const rzp1 = new (window as any).Razorpay(options);
         rzp1.on('payment.failed', function (response: any){
             if (response.error && response.error.description) {
                toast({
@@ -127,7 +141,7 @@ export default function RechargeDialog({ isOpen, onOpenChange, onRecharge, razor
             type="submit" 
             onClick={handleRechargeClick} 
             className="w-full" 
-            disabled={!razorpayKeyId || parseFloat(amount) <= 0 || isNaN(parseFloat(amount))}
+            disabled={!isLoaded || !razorpayKeyId || parseFloat(amount) <= 0 || isNaN(parseFloat(amount))}
           >
             Recharge with Razorpay
           </Button>
