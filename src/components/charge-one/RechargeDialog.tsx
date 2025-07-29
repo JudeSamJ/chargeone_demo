@@ -67,7 +67,6 @@ export default function RechargeDialog({ isOpen, onOpenChange, onRecharge, razor
     try {
         const rzp1 = new Razorpay(options);
         rzp1.on('payment.failed', function (response: any){
-            console.error("Payment Failed:", response);
             if (response.error && response.error.description) {
                toast({
                    variant: "destructive",
