@@ -7,7 +7,7 @@ import VehicleStatusCard from "./VehicleStatusCard";
 import ChargingSession from "./ChargingSession";
 import RoutePlanner from "./RoutePlanner";
 import RechargeDialog from "./RechargeDialog";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { X, Navigation, CheckCircle } from 'lucide-react';
 
