@@ -59,15 +59,13 @@ export default function RechargeDialog({ isOpen, onOpenChange, onRecharge, razor
       currency: "INR",
       name: "ChargeOne Wallet",
       description: "Recharge your wallet",
-      image: "https://placehold.co/100x100.png", // Replace with your logo
+      image: "https://placehold.co/100x100.png",
       handler: function (response: any) {
         onRecharge(rechargeAmount);
         setAmount('');
         onOpenChange(false);
       },
       prefill: {
-        name: "Test User",
-        email: "test.user@example.com",
         contact: "9000000000"
       },
       notes: {
