@@ -24,6 +24,7 @@ function HomePageContent() {
   const [route, setRoute] = useState<google.maps.DirectionsResult | null>(null);
   const [isPlanningRoute, setIsPlanningRoute] = useState(false);
   const [currentLocation, setCurrentLocation] = useState<google.maps.LatLngLiteral | null>(null);
+  const [isJourneyStarted, setIsJourneyStarted] = useState(false);
 
 
   const { toast } = useToast();
@@ -97,7 +98,16 @@ function HomePageContent() {
     setRoute(null);
     setStations([]);
     setSelectedStation(null);
+    setIsJourneyStarted(false);
   };
+  
+  const handleStartJourney = () => {
+    setIsJourneyStarted(true);
+    toast({
+        title: "Journey Started!",
+        description: "Live tracking is now active. The map will follow your location.",
+    });
+  }
 
   const handleStationsFound = useCallback((foundStations: Station[]) => {
     setStations(foundStations);
@@ -133,6 +143,8 @@ function HomePageContent() {
                   currentLocation={currentLocation}
                   hasRoute={!!route}
                   onClearRoute={handleClearRoute}
+                  isJourneyStarted={isJourneyStarted}
+                  onStartJourney={handleStartJourney}
               />
           </SidebarContent>
         </Sidebar>
@@ -145,6 +157,7 @@ function HomePageContent() {
                 route={route}
                 onLocationUpdate={setCurrentLocation}
                 currentLocation={currentLocation}
+                isJourneyStarted={isJourneyStarted}
             />
         </SidebarInset>
         <Toaster />

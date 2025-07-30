@@ -31,9 +31,10 @@ interface MapViewProps {
   route: google.maps.DirectionsResult | null;
   onLocationUpdate: (location: google.maps.LatLngLiteral) => void;
   currentLocation: google.maps.LatLngLiteral | null;
+  isJourneyStarted: boolean;
 }
 
-export default function MapView({ onStationsFound, stations, onStationClick, route, onLocationUpdate, currentLocation }: MapViewProps) {
+export default function MapView({ onStationsFound, stations, onStationClick, route, onLocationUpdate, currentLocation, isJourneyStarted }: MapViewProps) {
     const { isLoaded, loadError } = useJsApiLoader({
         googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "",
         libraries: ['places', 'geometry'], // Add geometry library for polyline decoding
@@ -50,6 +51,12 @@ export default function MapView({ onStationsFound, stations, onStationClick, rou
     }, []);
 
     useEffect(() => {
+        if (isJourneyStarted && mapRef.current && currentLocation) {
+            mapRef.current.panTo(currentLocation);
+        }
+    }, [isJourneyStarted, currentLocation]);
+
+    useEffect(() => {
         let watchId: number;
         if (navigator.geolocation) {
             watchId = navigator.geolocation.watchPosition(
@@ -59,7 +66,10 @@ export default function MapView({ onStationsFound, stations, onStationClick, rou
                         lng: position.coords.longitude,
                     };
                     onLocationUpdate(currentPos);
-                    if (!route) { // Only center on user if there's no active route
+
+                    if (isJourneyStarted && mapRef.current) {
+                        mapRef.current.panTo(currentPos);
+                    } else if (!route) { // Only center on user if there's no active route
                         setCenter(currentPos);
                     }
                     if (!stationsFetchedRef.current && !route) {
@@ -105,7 +115,7 @@ export default function MapView({ onStationsFound, stations, onStationClick, rou
                 navigator.geolocation.clearWatch(watchId);
             }
         };
-    }, [isLoaded, onLocationUpdate, toast, route, onStationsFound]);
+    }, [isLoaded, onLocationUpdate, toast, route, onStationsFound, isJourneyStarted]);
 
 
     useEffect(() => {

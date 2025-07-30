@@ -7,9 +7,9 @@ import VehicleStatusCard from "./VehicleStatusCard";
 import ChargingSession from "./ChargingSession";
 import RoutePlanner from "./RoutePlanner";
 import RechargeDialog from "./RechargeDialog";
-import { Card } from '../ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
-import { X } from 'lucide-react';
+import { X, Navigation, CheckCircle } from 'lucide-react';
 
 interface ControlsProps {
     userVehicle: Vehicle;
@@ -25,6 +25,8 @@ interface ControlsProps {
     currentLocation: google.maps.LatLngLiteral | null;
     hasRoute: boolean;
     onClearRoute: () => void;
+    isJourneyStarted: boolean;
+    onStartJourney: () => void;
 }
 
 export default function Controls({
@@ -41,7 +43,40 @@ export default function Controls({
     currentLocation,
     hasRoute,
     onClearRoute,
+    isJourneyStarted,
+    onStartJourney,
 }: ControlsProps) {
+
+    const ActiveRouteCard = () => (
+        <Card>
+            <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                    <Navigation className="h-6 w-6 text-primary" />
+                    Route Active
+                </CardTitle>
+                <CardDescription>
+                    Charging stations along your path are shown on the map.
+                </CardDescription>
+            </CardHeader>
+            <CardContent>
+                {isJourneyStarted ? (
+                    <div className="p-3 rounded-md bg-accent text-accent-foreground flex items-center justify-center text-sm font-medium">
+                        <CheckCircle className="h-5 w-5 mr-2" />
+                        <span>Live navigation is active.</span>
+                    </div>
+                ) : (
+                    <Button onClick={onStartJourney} className="w-full">
+                        <Navigation className="mr-2" /> Start Journey
+                    </Button>
+                )}
+            </CardContent>
+            <CardFooter>
+                 <Button variant="outline" onClick={onClearRoute} className="w-full">
+                    <X className="mr-2 h-4 w-4" /> Clear Route
+                 </Button>
+            </CardFooter>
+        </Card>
+    );
 
     return (
         <>
@@ -56,13 +91,7 @@ export default function Controls({
                         vehicle={userVehicle}
                     />
                 ) : hasRoute ? (
-                     <Card className="p-4 text-center">
-                        <p className="font-medium">A route is active.</p>
-                        <p className="text-sm text-muted-foreground mb-4">Charging stations along your path are shown on the map.</p>
-                        <Button variant="outline" onClick={onClearRoute} className="w-full">
-                           <X className="mr-2 h-4 w-4" /> Clear Route
-                        </Button>
-                    </Card>
+                     <ActiveRouteCard />
                 ) : (
                     <RoutePlanner onPlanRoute={handlePlanRoute} isPlanning={isPlanningRoute} currentLocation={currentLocation}/>
                 )}
