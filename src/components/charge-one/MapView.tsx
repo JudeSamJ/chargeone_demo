@@ -112,14 +112,13 @@ export default function MapView({ onStationsFound, stations, onStationClick, rou
         if (route && mapRef.current && isLoaded) {
             const bounds = new google.maps.LatLngBounds();
             
-            if (route.routes[0]?.bounds) {
-                const routeBounds = route.routes[0].bounds;
-                // The bounds object from the DirectionsResult is not a direct LatLngBounds constructor argument
-                // We need to create it from the northeast and southwest corners
-                const ne = routeBounds.getNorthEast();
-                const sw = routeBounds.getSouthWest();
-                bounds.extend(ne);
-                bounds.extend(sw);
+            const routeBounds = route.routes[0]?.bounds;
+            if (routeBounds) {
+                // The bounds object from the Directions API is a JSON literal, not a LatLngBounds object
+                const ne = routeBounds.northeast;
+                const sw = routeBounds.southwest;
+                bounds.extend(new google.maps.LatLng(ne.lat, ne.lng));
+                bounds.extend(new google.maps.LatLng(sw.lat, sw.lng));
             }
             if (!bounds.isEmpty()) {
               mapRef.current.fitBounds(bounds);
