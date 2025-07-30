@@ -114,13 +114,12 @@ export default function MapView({ onStationsFound, stations, onStationClick, rou
             
             if (route.routes[0]?.bounds) {
                 const routeBounds = route.routes[0].bounds;
-                const ne = routeBounds.northeast;
-                const sw = routeBounds.southwest;
-                const newBounds = new google.maps.LatLngBounds(
-                    new google.maps.LatLng(sw.lat, sw.lng),
-                    new google.maps.LatLng(ne.lat, ne.lng)
-                );
-                bounds.union(newBounds);
+                // The bounds object from the DirectionsResult is not a direct LatLngBounds constructor argument
+                // We need to create it from the northeast and southwest corners
+                const ne = routeBounds.getNorthEast();
+                const sw = routeBounds.getSouthWest();
+                bounds.extend(ne);
+                bounds.extend(sw);
             }
             if (!bounds.isEmpty()) {
               mapRef.current.fitBounds(bounds);
@@ -129,6 +128,7 @@ export default function MapView({ onStationsFound, stations, onStationClick, rou
     }, [route, isLoaded]);
 
     const getStationMarkerIcon = (status: Station['status']) => {
+        if (!isLoaded) return null;
         let color = '#808080'; // Grey for unavailable
         if (status === 'available') {
             color = '#10B981'; // Green
