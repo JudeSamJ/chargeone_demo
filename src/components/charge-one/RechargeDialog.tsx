@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -67,7 +68,7 @@ export default function RechargeDialog({ isOpen, onOpenChange, onRecharge, razor
       prefill: {
         name: "Test User",
         email: "test.user@example.com",
-        contact: "9999999999"
+        contact: "9000000000"
       },
       notes: {
         address: "ChargeOne Corporate Office"
