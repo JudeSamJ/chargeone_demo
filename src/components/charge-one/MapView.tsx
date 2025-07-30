@@ -56,6 +56,13 @@ export default function MapView({ onStationsFound, stations, onStationClick, rou
         }
     }, [isJourneyStarted, currentLocation]);
 
+    // This effect will reset the station fetching flag when the route is cleared.
+    useEffect(() => {
+        if (!route) {
+            stationsFetchedRef.current = false;
+        }
+    }, [route]);
+
     useEffect(() => {
         let watchId: number;
         if (navigator.geolocation) {
