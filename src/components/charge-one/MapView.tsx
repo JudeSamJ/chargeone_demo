@@ -76,7 +76,7 @@ export default function MapView({ onStationsFound, stations, onStationClick, rou
 
                     if (isJourneyStarted && mapRef.current) {
                         mapRef.current.panTo(currentPos);
-                    } else if (!route) { // Only center on user if there's no active route
+                    } else if (!route && !stationsFetchedRef.current) { // Only center on user if there's no active route
                         setCenter(currentPos);
                     }
                     if (!stationsFetchedRef.current && !route) {

@@ -11,6 +11,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Skeleton } from '@/components/ui/skeleton';
 import { planRoute } from '@/ai/flows/planRoute';
+import { findStations } from '@/ai/flows/findStations';
 import Controls from '@/components/charge-one/Controls';
 import { SidebarProvider, Sidebar, SidebarInset, SidebarContent, SidebarRail } from '@/components/ui/sidebar';
 import Header from '@/components/charge-one/Header';
@@ -96,9 +97,19 @@ function HomePageContent() {
 
   const handleClearRoute = () => {
     setRoute(null);
-    setStations([]);
     setSelectedStation(null);
     setIsJourneyStarted(false);
+    if (currentLocation) {
+        findStations({ latitude: currentLocation.lat, longitude: currentLocation.lng, radius: 10000 })
+            .then(setStations)
+            .catch(err => {
+                console.error("Error finding stations after clearing route:", err);
+                toast({ variant: 'destructive', title: 'Could not find nearby stations.'});
+                setStations([]);
+            });
+    } else {
+        setStations([]);
+    }
   };
   
   const handleStartJourney = () => {
