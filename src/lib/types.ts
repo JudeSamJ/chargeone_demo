@@ -41,10 +41,17 @@ export const PlanRouteInputSchema = z.object({
 });
 
 // The output from google.maps.DirectionsResult is complex, so we use z.any()
-// and cast it in the component.
+// and cast it in the component. We add points to the overview_polyline for decoding.
 export const PlanRouteOutputSchema = z.object({
-  route: z.any(),
-  chargingStations: z.array(z.custom<Station>()),
+    route: z.any().refine(data => 
+        data && 
+        data.routes && 
+        data.routes.length > 0 && 
+        data.routes[0].overview_polyline && 
+        typeof data.routes[0].overview_polyline.points === 'string', 
+        { message: "Route must have a valid encoded polyline." }
+    ),
+    chargingStations: z.array(z.custom<Station>()),
 });
 
 export type PlanRouteInput = z.infer<typeof PlanRouteInputSchema>;

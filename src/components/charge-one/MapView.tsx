@@ -1,7 +1,7 @@
 
 "use client";
 
-import { GoogleMap, useJsApiLoader, MarkerF, DirectionsRenderer } from '@react-google-maps/api';
+import { GoogleMap, useJsApiLoader, MarkerF, DirectionsRenderer, Polyline } from '@react-google-maps/api';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { findStations } from '@/ai/flows/findStations';
 import type { Station } from '@/lib/types';
@@ -36,7 +36,7 @@ interface MapViewProps {
 export default function MapView({ onStationsFound, stations, onStationClick, route, onLocationUpdate, currentLocation }: MapViewProps) {
     const { isLoaded, loadError } = useJsApiLoader({
         googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "",
-        libraries: ['places'],
+        libraries: ['places', 'geometry'], // Add geometry library for polyline decoding
     });
     
     const [center, setCenter] = useState(defaultCenter);
@@ -164,6 +164,8 @@ export default function MapView({ onStationsFound, stations, onStationClick, rou
         }
       }
     };
+    
+    const decodedPath = route && isLoaded ? google.maps.geometry.encoding.decodePath(route.routes[0].overview_polyline.points) : [];
 
     const destinationMarker = getDestinationMarkerIcon();
 
@@ -209,18 +211,15 @@ export default function MapView({ onStationsFound, stations, onStationClick, rou
                     />
                 ))}
                 
-                {route && (
-                  <DirectionsRenderer
-                    directions={route}
-                    options={{
-                        polylineOptions: {
+                {decodedPath.length > 0 && (
+                    <Polyline
+                        path={decodedPath}
+                        options={{
                           strokeColor: '#1976D2',
                           strokeWeight: 6,
                           strokeOpacity: 0.8,
-                        },
-                        suppressMarkers: true,
-                    }}
-                  />
+                        }}
+                    />
                 )}
                 
                 {destinationMarker && (
