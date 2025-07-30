@@ -14,22 +14,28 @@ const firebaseConfig = {
 
 // Initialize Firebase App
 let app: FirebaseApp;
-if (!getApps().length) {
-    const requiredConfigs = { 
-      apiKey: firebaseConfig.apiKey,
-      authDomain: firebaseConfig.authDomain,
-      projectId: firebaseConfig.projectId,
-    };
-    const missingConfigs = Object.entries(requiredConfigs)
-        .filter(([_, value]) => !value)
-        .map(([key]) => key);
 
-    if (missingConfigs.length > 0) {
-        const errorMessage = `Firebase configuration is missing or incomplete in your .env file. Missing environment variables: ${missingConfigs.join(', ')}`;
-        // We throw an error to halt execution if the config is invalid.
-        // This prevents the app from trying to initialize Firebase with bad data.
-        throw new Error(errorMessage);
+// This function throws a clear error if essential Firebase config is missing.
+const validateFirebaseConfig = (config: typeof firebaseConfig) => {
+    const requiredKeys: (keyof typeof firebaseConfig)[] = [
+        'apiKey',
+        'authDomain',
+        'projectId',
+    ];
+    const missingKeys = requiredKeys.filter(key => !config[key]);
+
+    if (missingKeys.length > 0) {
+        throw new Error(
+            `Firebase configuration is missing or incomplete. 
+            Please ensure the following environment variables are set in your .env file: 
+            ${missingKeys.map(key => `NEXT_PUBLIC_FIREBASE_${key.toUpperCase()}`).join(', ')}`
+        );
     }
+};
+
+
+if (!getApps().length) {
+  validateFirebaseConfig(firebaseConfig);
   app = initializeApp(firebaseConfig);
 } else {
   app = getApp();
