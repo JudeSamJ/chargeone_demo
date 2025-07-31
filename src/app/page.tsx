@@ -37,6 +37,8 @@ function HomePageContent() {
   const [liveJourneyData, setLiveJourneyData] = useState<LiveJourneyData | null>(null);
   const journeyIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const [initialTripData, setInitialTripData] = useState<{distance: number, duration: number} | null>(null);
+  const [mapTypeId, setMapTypeId] = useState<google.maps.MapTypeId>(google.maps.MapTypeId.ROADMAP);
+  const [showTraffic, setShowTraffic] = useState(false);
   
 
   const { toast } = useToast();
@@ -117,6 +119,7 @@ function HomePageContent() {
     setRoute(result.route);
     setStations(result.chargingStations);
     setInitialTripData({ distance: result.totalDistance, duration: result.totalDuration });
+    setLiveJourneyData(null);
 
 
     const leg = result.route.routes[0]?.legs[0];
@@ -128,8 +131,6 @@ function HomePageContent() {
             endAddress: leg.end_address || 'Destination',
             estimatedArrivalTime: arrivalTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         });
-    } else {
-        setLiveJourneyData(null);
     }
   }
 
@@ -183,12 +184,32 @@ function HomePageContent() {
             title: "Journey Started!",
             description: "Live tracking is now active. The map will follow your location.",
         });
-    } else {
-        toast({
-            variant: 'destructive',
-            title: "Could not start journey.",
-            description: "Route data is missing.",
-        })
+    } else if (route) {
+        // If liveJourneyData is null for some reason but we have a route, try to create it.
+        const leg = route.routes[0]?.legs[0];
+        const duration = initialTripData?.duration || leg?.duration?.value || 0;
+        const distance = initialTripData?.distance || leg?.distance?.value || 0;
+
+        if (leg) {
+             const arrivalTime = new Date(Date.now() + duration * 1000);
+             setLiveJourneyData({
+                distance: formatDistance(distance),
+                duration: formatDuration(duration),
+                endAddress: leg.end_address || 'Destination',
+                estimatedArrivalTime: arrivalTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+             });
+             setIsJourneyStarted(true);
+             toast({
+                title: "Journey Started!",
+                description: "Live tracking is now active. The map will follow your location.",
+            });
+        } else {
+             toast({
+                variant: 'destructive',
+                title: "Could not start journey.",
+                description: "Route data is missing.",
+            });
+        }
     }
   }
 
@@ -233,7 +254,12 @@ function HomePageContent() {
           </SidebarContent>
         </Sidebar>
         <SidebarInset>
-          <Header />
+          <Header 
+            mapTypeId={mapTypeId}
+            onMapTypeIdChange={setMapTypeId}
+            showTraffic={showTraffic}
+            onShowTrafficChange={setShowTraffic}
+          />
             <MapView 
                 onStationsFound={handleStationsFound} 
                 stations={stations}
@@ -243,6 +269,8 @@ function HomePageContent() {
                 currentLocation={currentLocation}
                 isJourneyStarted={isJourneyStarted}
                 onReRoute={handlePlanRoute}
+                mapTypeId={mapTypeId}
+                showTraffic={showTraffic}
             />
         </SidebarInset>
         <Toaster />

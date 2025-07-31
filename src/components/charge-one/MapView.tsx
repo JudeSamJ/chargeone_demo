@@ -1,7 +1,7 @@
 
 "use client";
 
-import { GoogleMap, useJsApiLoader, MarkerF, DirectionsRenderer, Polyline } from '@react-google-maps/api';
+import { GoogleMap, useJsApiLoader, MarkerF, InfoWindowF, Polyline, TrafficLayer } from '@react-google-maps/api';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { findStations } from '@/ai/flows/findStations';
 import type { Station } from '@/lib/types';
@@ -9,6 +9,9 @@ import { useToast } from '@/hooks/use-toast';
 import { useTheme } from 'next-themes';
 import { mapStylesLight } from '@/lib/map-styles-light';
 import { mapStylesDark } from '@/lib/map-styles-dark';
+import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
+import { Badge } from '../ui/badge';
+import { Zap, Plug, CircleDotDashed } from 'lucide-react';
 
 
 const mapContainerStyle = {
@@ -36,22 +39,34 @@ interface MapViewProps {
   currentLocation: google.maps.LatLngLiteral | null;
   isJourneyStarted: boolean;
   onReRoute: (origin: string, destination: string) => void;
+  mapTypeId: google.maps.MapTypeId;
+  showTraffic: boolean;
 }
 
-export default function MapView({ onStationsFound, stations, onStationClick, route, onLocationUpdate, currentLocation, isJourneyStarted, onReRoute }: MapViewProps) {
+export default function MapView({ 
+    onStationsFound, 
+    stations, 
+    onStationClick, 
+    route, 
+    onLocationUpdate, 
+    currentLocation, 
+    isJourneyStarted, 
+    onReRoute,
+    mapTypeId,
+    showTraffic,
+}: MapViewProps) {
     const { isLoaded, loadError } = useJsApiLoader({
         googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "",
         libraries: ['places', 'geometry'], 
     });
     
-    const [center, setCenter] = useState(defaultCenter);
+    const [activeMarker, setActiveMarker] = useState<string | null>(null);
     const { toast } = useToast();
     const mapRef = useRef<google.maps.Map | null>(null);
     const { theme } = useTheme();
     const stationsFetchedRef = useRef(false);
     const lastRerouteTimeRef = useRef<number>(0);
     const initialLocationSetRef = useRef(false);
-
 
     const onMapLoad = useCallback((map: google.maps.Map) => {
         mapRef.current = map;
@@ -72,7 +87,7 @@ export default function MapView({ onStationsFound, stations, onStationClick, rou
         }
     }, [isJourneyStarted, currentLocation]);
 
-    useEffect(() => {
+     useEffect(() => {
         if (!route) {
             stationsFetchedRef.current = false;
         }
@@ -221,6 +236,8 @@ export default function MapView({ onStationsFound, stations, onStationClick, rou
     };
     
     const destinationMarker = getDestinationMarkerIcon();
+    const mapThemeStyles = theme === 'dark' ? mapStylesDark : mapStylesLight;
+
 
     if (loadError) return <div className="flex items-center justify-center h-full w-full bg-muted rounded-lg"><p>Error loading map</p></div>;
     if (!isLoaded) return <div className="flex items-center justify-center h-full w-full bg-muted rounded-lg"><p>Loading Map...</p></div>;
@@ -228,13 +245,14 @@ export default function MapView({ onStationsFound, stations, onStationClick, rou
     return (
         <GoogleMap
             mapContainerStyle={mapContainerStyle}
-            center={center}
+            center={defaultCenter}
             zoom={14}
             onLoad={onMapLoad}
+            mapTypeId={mapTypeId}
             options={{
                 disableDefaultUI: true,
                 zoomControl: true,
-                styles: theme === 'dark' ? mapStylesDark : mapStylesLight,
+                styles: mapTypeId === 'roadmap' ? mapThemeStyles : undefined,
             }}
         >
             {isLoaded && (
@@ -260,9 +278,41 @@ export default function MapView({ onStationsFound, stations, onStationClick, rou
                         position={{ lat: station.lat, lng: station.lng }}
                         title={`${station.name} (${station.power}kW)`}
                         onClick={() => onStationClick(station)}
+                        onMouseOver={() => setActiveMarker(station.id)}
+                        onMouseOut={() => setActiveMarker(null)}
                         icon={getStationMarkerIcon(station.status)}
                     />
                 ))}
+
+                {activeMarker && stations.find(s => s.id === activeMarker) && (
+                    <InfoWindowF
+                        position={stations.find(s => s.id === activeMarker)!}
+                        onCloseClick={() => setActiveMarker(null)}
+                        options={{ pixelOffset: new google.maps.Size(0, -30) }}
+                    >
+                        <div className="p-1 max-w-xs">
+                           <h4 className="font-bold text-base mb-1">{stations.find(s => s.id === activeMarker)?.name}</h4>
+                           <div className="flex flex-col gap-2 text-sm">
+                                <div className="flex items-center gap-2">
+                                    <CircleDotDashed className="h-4 w-4 text-muted-foreground" /> 
+                                    <Badge variant={stations.find(s => s.id === activeMarker)?.status === 'available' ? 'default' : 'destructive'} className="capitalize">
+                                        {stations.find(s => s.id === activeMarker)?.status.replace('-', ' ')}
+                                    </Badge>
+                                </div>
+                               <div className="flex items-center gap-2">
+                                   <Zap className="h-4 w-4 text-muted-foreground" />
+                                   <span>{stations.find(s => s.id === activeMarker)?.power} kW</span>
+                               </div>
+                               <div className="flex items-center gap-2">
+                                   <Plug className="h-4 w-4 text-muted-foreground" />
+                                   <div className="flex gap-1">
+                                    {stations.find(s => s.id === activeMarker)?.connectors.map(c => <Badge key={c} variant="secondary">{c}</Badge>)}
+                                   </div>
+                               </div>
+                           </div>
+                        </div>
+                    </InfoWindowF>
+                )}
                 
                 {decodedPath.length > 0 && (
                     <Polyline
@@ -282,11 +332,10 @@ export default function MapView({ onStationsFound, stations, onStationClick, rou
                         icon={destinationMarker.icon}
                     />
                 )}
-                
+
+                {showTraffic && <TrafficLayer autoUpdate />}
               </>
             )}
         </GoogleMap>
     );
 }
-
-    

@@ -17,9 +17,17 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ThemeToggle } from './ThemeToggle';
 import { SidebarTrigger } from '../ui/sidebar';
 import { Button } from '../ui/button';
+import MapControls from './MapControls';
 
 
-export default function Header() {
+interface HeaderProps {
+    mapTypeId: google.maps.MapTypeId;
+    onMapTypeIdChange: (id: google.maps.MapTypeId) => void;
+    showTraffic: boolean;
+    onShowTrafficChange: (show: boolean) => void;
+}
+
+export default function Header({ mapTypeId, onMapTypeIdChange, showTraffic, onShowTrafficChange }: HeaderProps) {
     const { user, loading } = useAuth();
     const router = useRouter();
 
@@ -50,6 +58,12 @@ export default function Header() {
                     <h1 className="text-2xl font-bold text-primary font-headline">ChargeOne</h1>
                 </div>
                 <div className="flex items-center gap-2">
+                    <MapControls 
+                        mapTypeId={mapTypeId}
+                        onMapTypeIdChange={onMapTypeIdChange}
+                        showTraffic={showTraffic}
+                        onShowTrafficChange={onShowTrafficChange}
+                    />
                     <ThemeToggle />
                     {!loading && (
                     user ? (
