@@ -41,6 +41,7 @@ interface MapViewProps {
   onReRoute: (origin: string, destination: string) => void;
   mapTypeId: string;
   showTraffic: boolean;
+  bookedStationIds: string[];
 }
 
 export default function MapView({ 
@@ -54,6 +55,7 @@ export default function MapView({
     onReRoute,
     mapTypeId,
     showTraffic,
+    bookedStationIds
 }: MapViewProps) {
     const { isLoaded, loadError } = useJsApiLoader({
         googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "",
@@ -196,12 +198,25 @@ export default function MapView({
         }
     }, [route, isLoaded]);
 
-    const getStationMarkerIcon = (status: Station['status']) => {
+    const getStationMarkerIcon = (station: Station) => {
         if (!isLoaded) return null;
+
+        if (bookedStationIds.includes(station.id)) {
+            return {
+                path: 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.5 14H11v-6h2v4h1.5v2z', // Clock icon path
+                fillColor: '#3B82F6', // Blue-500
+                fillOpacity: 1,
+                strokeColor: '#ffffff',
+                strokeWeight: 1.5,
+                scale: 1.2,
+                anchor: new google.maps.Point(12, 12),
+            };
+        }
+
         let color = '#808080'; // Grey for unavailable
-        if (status === 'available') {
+        if (station.status === 'available') {
             color = '#10B981'; // Green
-        } else if (status === 'in-use') {
+        } else if (station.status === 'in-use') {
             color = '#EF4444'; // Red
         }
 
@@ -282,7 +297,7 @@ export default function MapView({
                         onClick={() => onStationClick(station)}
                         onMouseOver={() => setActiveMarker(station.id)}
                         onMouseOut={() => setActiveMarker(null)}
-                        icon={getStationMarkerIcon(station.status)}
+                        icon={getStationMarkerIcon(station)}
                     />
                 ))}
 

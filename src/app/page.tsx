@@ -31,6 +31,7 @@ function HomePageContent() {
   const [walletBalance, setWalletBalance] = useState(0);
   const [isRechargeOpen, setIsRechargeOpen] = useState(false);
   const [isBookingOpen, setIsBookingOpen] = useState(false);
+  const [bookedStationIds, setBookedStationIds] = useState<string[]>([]);
   const [userVehicle, setUserVehicle] = useState<Vehicle | null>(null);
   const [route, setRoute] = useState<google.maps.DirectionsResult | null>(null);
   const [isPlanningRoute, setIsPlanningRoute] = useState(false);
@@ -206,10 +207,13 @@ function HomePageContent() {
 
   const handleBookingConfirm = (date: Date, time: string) => {
     setIsBookingOpen(false);
-    toast({
-        title: "Slot Booked!",
-        description: `Your slot at ${selectedStation?.name} is confirmed for ${date.toLocaleDateString()} at ${time}.`,
-    });
+    if (selectedStation) {
+        setBookedStationIds(prev => [...prev, selectedStation.id]);
+        toast({
+            title: "Slot Booked!",
+            description: `Your slot at ${selectedStation?.name} is confirmed for ${date.toLocaleDateString()} at ${time}.`,
+        });
+    }
   }
 
   const handleStationsFound = useCallback((foundStations: Station[]) => {
@@ -276,6 +280,7 @@ function HomePageContent() {
                 onReRoute={handlePlanRoute}
                 mapTypeId={mapTypeId}
                 showTraffic={showTraffic}
+                bookedStationIds={bookedStationIds}
             />
         </SidebarInset>
         <Toaster />
