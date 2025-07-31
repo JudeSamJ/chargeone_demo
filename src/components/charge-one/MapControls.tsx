@@ -18,8 +18,8 @@ import { Label } from "../ui/label";
 import { Switch } from "../ui/switch";
 
 interface MapControlsProps {
-    mapTypeId: google.maps.MapTypeId;
-    onMapTypeIdChange: (id: google.maps.MapTypeId) => void;
+    mapTypeId: string;
+    onMapTypeIdChange: (id: string) => void;
     showTraffic: boolean;
     onShowTrafficChange: (show: boolean) => void;
 }
@@ -32,9 +32,9 @@ export default function MapControls({
 }: MapControlsProps) {
 
     const mapTypes = [
-        { id: google.maps.MapTypeId.ROADMAP, label: "Roadmap", Icon: Map },
-        { id: google.maps.MapTypeId.SATELLITE, label: "Satellite", Icon: Satellite },
-        { id: google.maps.MapTypeId.TERRAIN, label: "Terrain", Icon: Mountain },
+        { id: "roadmap", label: "Roadmap", Icon: Map },
+        { id: "satellite", label: "Satellite", Icon: Satellite },
+        { id: "terrain", label: "Terrain", Icon: Mountain },
     ];
     
     const ActiveIcon = mapTypes.find(m => m.id === mapTypeId)?.Icon || Map;

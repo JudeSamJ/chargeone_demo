@@ -21,8 +21,8 @@ import MapControls from './MapControls';
 
 
 interface HeaderProps {
-    mapTypeId: google.maps.MapTypeId;
-    onMapTypeIdChange: (id: google.maps.MapTypeId) => void;
+    mapTypeId: string;
+    onMapTypeIdChange: (id: string) => void;
     showTraffic: boolean;
     onShowTrafficChange: (show: boolean) => void;
 }

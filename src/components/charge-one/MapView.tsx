@@ -39,7 +39,7 @@ interface MapViewProps {
   currentLocation: google.maps.LatLngLiteral | null;
   isJourneyStarted: boolean;
   onReRoute: (origin: string, destination: string) => void;
-  mapTypeId: google.maps.MapTypeId;
+  mapTypeId: string;
   showTraffic: boolean;
 }
 

@@ -37,7 +37,7 @@ function HomePageContent() {
   const [liveJourneyData, setLiveJourneyData] = useState<LiveJourneyData | null>(null);
   const journeyIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const [initialTripData, setInitialTripData] = useState<{distance: number, duration: number} | null>(null);
-  const [mapTypeId, setMapTypeId] = useState<google.maps.MapTypeId>(google.maps.MapTypeId.ROADMAP);
+  const [mapTypeId, setMapTypeId] = useState<string>('roadmap');
   const [showTraffic, setShowTraffic] = useState(false);
   
 
