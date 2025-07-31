@@ -3,12 +3,13 @@
 
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Clock, Milestone, Navigation, X } from 'lucide-react';
+import { Clock, Milestone, Navigation, X, Flag } from 'lucide-react';
 
 interface LiveJourneyData {
     distance: string;
     duration: string;
     endAddress: string;
+    estimatedArrivalTime: string | null;
 }
 
 interface LiveNavigationCardProps {
@@ -30,8 +31,8 @@ export default function LiveNavigationCard({ data, onClearRoute }: LiveNavigatio
                         <span className="sr-only">End Navigation</span>
                     </Button>
                 </div>
-                <CardDescription className="text-primary-foreground/80">
-                    to {data.endAddress}
+                <CardDescription className="text-primary-foreground/80 flex items-center gap-2">
+                   <Flag className="h-4 w-4" /> to {data.endAddress}
                 </CardDescription>
             </CardHeader>
             <CardContent className="grid grid-cols-2 gap-4">
@@ -39,14 +40,16 @@ export default function LiveNavigationCard({ data, onClearRoute }: LiveNavigatio
                     <Clock className="h-7 w-7" />
                     <div>
                         <p className="text-2xl font-bold">{data.duration}</p>
-                        <p className="text-sm opacity-80">ETA</p>
+                        <p className="text-sm opacity-80">
+                           {data.estimatedArrivalTime ? `ETA ${data.estimatedArrivalTime}` : 'Calculating...'}
+                        </p>
                     </div>
                 </div>
                 <div className="flex items-center gap-3">
                     <Milestone className="h-7 w-7" />
                     <div>
                         <p className="text-2xl font-bold">{data.distance}</p>
-                        <p className="text-sm opacity-80">Remaining</p>
+                        <p className="text-sm opacity-80">Total Distance</p>
                     </div>
                 </div>
             </CardContent>

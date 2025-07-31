@@ -16,6 +16,7 @@ interface LiveJourneyData {
     distance: string;
     duration: string;
     endAddress: string;
+    estimatedArrivalTime: string | null;
 }
 
 interface ControlsProps {

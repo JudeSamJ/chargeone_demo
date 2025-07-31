@@ -34,11 +34,14 @@ const planRouteFlow = ai.defineFlow(
     let currentChargeKm = vehicleMaxRangeKm * (vehicle.currentCharge / 100);
     
     const requiredStations: Station[] = [];
+    let totalChargingTimeSeconds = 0;
 
     if (!leg.steps || leg.steps.length === 0) {
         return {
             route: directionsResult,
             chargingStations: [],
+            totalDistance: leg.distance?.value || 0,
+            totalDuration: leg.duration?.value || 0,
         };
     }
 
@@ -56,13 +59,18 @@ const planRouteFlow = ai.defineFlow(
                 radius: 50000, // 50km search radius
             });
             
-            // Get the top 3-5 best available stations
-            const bestStations = nearbyStations
-              .filter(s => s.status === 'available')
-              .slice(0, 3);
+            const bestStation = nearbyStations.find(s => s.status === 'available');
 
-            if (bestStations.length > 0) {
-                requiredStations.push(...bestStations);
+            if (bestStation) {
+                requiredStations.push(bestStation);
+
+                // Estimate charging time.
+                // Assuming we charge from ~10% to 80% (a 70% charge)
+                const chargeNeededKwh = vehicle.batteryCapacity * 0.7;
+                // Time (h) = Energy (kWh) / Power (kW)
+                const chargingTimeHours = chargeNeededKwh / bestStation.power;
+                totalChargingTimeSeconds += chargingTimeHours * 3600;
+
                 // Simulate a full recharge after finding stations
                 currentChargeKm = vehicleMaxRangeKm;
             } else {
@@ -76,10 +84,16 @@ const planRouteFlow = ai.defineFlow(
         currentChargeKm -= stepDistanceKm;
     }
 
+    const totalDriveDurationSeconds = leg.duration?.value || 0;
+    const totalDurationSeconds = totalDriveDurationSeconds + totalChargingTimeSeconds;
+    const totalDistanceMeters = leg.distance?.value || 0;
+
 
     return {
       route: directionsResult,
       chargingStations: requiredStations,
+      totalDistance: totalDistanceMeters,
+      totalDuration: totalDurationSeconds,
     };
   }
 );
