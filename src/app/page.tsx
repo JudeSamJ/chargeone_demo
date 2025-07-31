@@ -16,6 +16,7 @@ import Controls from '@/components/charge-one/Controls';
 import { SidebarProvider, Sidebar, SidebarInset, SidebarContent, SidebarRail } from '@/components/ui/sidebar';
 import Header from '@/components/charge-one/Header';
 import { formatDuration, formatDistance } from './utils';
+import { add } from 'date-fns';
 
 interface LiveJourneyData {
     distance: string;
@@ -29,6 +30,7 @@ function HomePageContent() {
   const [selectedStation, setSelectedStation] = useState<Station | null>(null);
   const [walletBalance, setWalletBalance] = useState(0);
   const [isRechargeOpen, setIsRechargeOpen] = useState(false);
+  const [isBookingOpen, setIsBookingOpen] = useState(false);
   const [userVehicle, setUserVehicle] = useState<Vehicle | null>(null);
   const [route, setRoute] = useState<google.maps.DirectionsResult | null>(null);
   const [isPlanningRoute, setIsPlanningRoute] = useState(false);
@@ -39,6 +41,7 @@ function HomePageContent() {
   const [initialTripData, setInitialTripData] = useState<{distance: number, duration: number} | null>(null);
   const [mapTypeId, setMapTypeId] = useState<string>('roadmap');
   const [showTraffic, setShowTraffic] = useState(false);
+  const initialLocationSetRef = useRef(false);
   
 
   const { toast } = useToast();
@@ -130,7 +133,7 @@ function HomePageContent() {
     
     const leg = result.route.routes[0]?.legs[0];
     if (leg) {
-        const arrivalTime = new Date(Date.now() + result.totalDuration * 1000);
+        const arrivalTime = add(new Date(), {seconds: result.totalDuration});
         setLiveJourneyData({
             distance: formatDistance(result.totalDistance),
             duration: formatDuration(result.totalDuration),
@@ -201,9 +204,20 @@ function HomePageContent() {
     }
   }
 
+  const handleBookingConfirm = (date: Date, time: string) => {
+    setIsBookingOpen(false);
+    toast({
+        title: "Slot Booked!",
+        description: `Your slot at ${selectedStation?.name} is confirmed for ${date.toLocaleDateString()} at ${time}.`,
+    });
+  }
+
   const handleStationsFound = useCallback((foundStations: Station[]) => {
-    setStations(foundStations);
-  }, [setStations]);
+    if (!route) { // Only update stations if a route is not active
+        setStations(foundStations);
+    }
+  }, [route]);
+
 
   if (loading || (!user && !isGuest) || !userVehicle) {
     return (
@@ -238,6 +252,9 @@ function HomePageContent() {
                   isJourneyStarted={isJourneyStarted}
                   onStartJourney={handleStartJourney}
                   liveJourneyData={liveJourneyData}
+                  isBookingOpen={isBookingOpen}
+                  setIsBookingOpen={setIsBookingOpen}
+                  onBookingConfirm={handleBookingConfirm}
               />
           </SidebarContent>
         </Sidebar>

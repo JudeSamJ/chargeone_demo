@@ -49,6 +49,7 @@ const findStationsFlow = ai.defineFlow(
         pricePerKwh: 18.50,
         connectors: ['CCS'],
         status: status,
+        hasSlotBooking: Math.random() > 0.5,
         lat: p.geometry?.location?.lat,
         lng: p.geometry?.location?.lng,
       };

@@ -8,6 +8,7 @@ import ChargingSession from "./ChargingSession";
 import RoutePlanner from "./RoutePlanner";
 import RechargeDialog from "./RechargeDialog";
 import LiveNavigationCard from "./LiveNavigationCard";
+import BookingDialog from "./BookingDialog";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Navigation, X } from 'lucide-react';
@@ -36,6 +37,9 @@ interface ControlsProps {
     isJourneyStarted: boolean;
     onStartJourney: () => void;
     liveJourneyData: LiveJourneyData | null;
+    isBookingOpen: boolean;
+    setIsBookingOpen: (isOpen: boolean) => void;
+    onBookingConfirm: (date: Date, time: string) => void;
 }
 
 export default function Controls({
@@ -55,6 +59,9 @@ export default function Controls({
     isJourneyStarted,
     onStartJourney,
     liveJourneyData,
+    isBookingOpen,
+    setIsBookingOpen,
+    onBookingConfirm
 }: ControlsProps) {
 
     const ActiveRouteCard = () => (
@@ -92,6 +99,7 @@ export default function Controls({
                         onEndSession={handleEndSession}
                         onClearSelection={() => handleStationSelect(null)}
                         vehicle={userVehicle}
+                        onBookSlot={() => setIsBookingOpen(true)}
                     />
                 ) : isJourneyStarted && liveJourneyData ? (
                     <LiveNavigationCard 
@@ -109,6 +117,12 @@ export default function Controls({
                 onOpenChange={setIsRechargeOpen}
                 onRecharge={handleRecharge}
                 razorpayKeyId={process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID}
+            />
+            <BookingDialog
+                isOpen={isBookingOpen}
+                onOpenChange={setIsBookingOpen}
+                station={selectedStation}
+                onConfirm={onBookingConfirm}
             />
         </>
     );

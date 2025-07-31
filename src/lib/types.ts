@@ -18,6 +18,7 @@ export const StationSchema = z.object({
   pricePerKwh: z.number(), // in currency - Note: This is a placeholder
   connectors: z.array(z.enum(['CCS', 'CHAdeMO', 'Type 2'])), // Placeholder
   status: z.enum(['available', 'in-use', 'unavailable']), // 'available', 'in-use', or 'unavailable'
+  hasSlotBooking: z.boolean().default(false),
   lat: z.number(),
   lng: z.number(),
 });

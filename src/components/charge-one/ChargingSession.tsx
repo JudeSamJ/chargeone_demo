@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -5,7 +6,7 @@ import type { Station, Vehicle } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { Bolt, Timer, BatteryCharging, Power, CheckCircle, Zap, X, Undo2 } from 'lucide-react';
+import { Bolt, Timer, BatteryCharging, Power, CheckCircle, Zap, X, Undo2, CalendarClock } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface ChargingSessionProps {
@@ -13,9 +14,10 @@ interface ChargingSessionProps {
   vehicle: Vehicle;
   onEndSession: (cost: number) => void;
   onClearSelection: () => void;
+  onBookSlot: () => void;
 }
 
-export default function ChargingSession({ station, vehicle, onEndSession, onClearSelection }: ChargingSessionProps) {
+export default function ChargingSession({ station, vehicle, onEndSession, onClearSelection, onBookSlot }: ChargingSessionProps) {
   const [isCharging, setIsCharging] = useState(false);
   const [sessionFinished, setSessionFinished] = useState(false);
   const [elapsedTime, setElapsedTime] = useState(0);
@@ -153,15 +155,22 @@ export default function ChargingSession({ station, vehicle, onEndSession, onClea
             </div>
         </div>
       </CardContent>
-      <CardFooter>
+      <CardFooter className="flex flex-col gap-2">
         {isCharging ? (
           <Button onClick={handleStop} variant="destructive" className="w-full">
             <Power className="mr-2 h-4 w-4" /> Stop Charging
           </Button>
         ) : (
-          <Button onClick={handleStart} className="w-full bg-accent text-accent-foreground hover:bg-accent/90">
-            <BatteryCharging className="mr-2 h-4 w-4" /> Start Charging
-          </Button>
+          <div className="w-full flex flex-col sm:flex-row gap-2">
+            <Button onClick={handleStart} className="w-full bg-accent text-accent-foreground hover:bg-accent/90">
+                <BatteryCharging className="mr-2 h-4 w-4" /> Start Charging
+            </Button>
+            {station.hasSlotBooking && (
+                <Button onClick={onBookSlot} className="w-full" variant="outline">
+                    <CalendarClock className="mr-2 h-4 w-4" /> Book Slot
+                </Button>
+            )}
+          </div>
         )}
       </CardFooter>
     </Card>
