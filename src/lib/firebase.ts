@@ -1,6 +1,7 @@
 
 import { initializeApp, getApps, getApp, FirebaseApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, Auth } from "firebase/auth";
+import { getFirestore, Firestore } from "firebase/firestore";
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -42,6 +43,7 @@ if (!getApps().length) {
 }
 
 const auth: Auth = getAuth(app);
+const db: Firestore = getFirestore(app);
 const provider = new GoogleAuthProvider();
 
 export const signInWithGoogle = () => {
@@ -52,4 +54,4 @@ export const signOutWithGoogle = () => {
   return signOut(auth);
 };
 
-export { auth, app };
+export { auth, app, db };

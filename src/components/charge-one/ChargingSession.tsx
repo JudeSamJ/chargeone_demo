@@ -15,9 +15,10 @@ interface ChargingSessionProps {
   onEndSession: (cost: number) => void;
   onClearSelection: () => void;
   onBookSlot: () => void;
+  isGuest: boolean;
 }
 
-export default function ChargingSession({ station, vehicle, onEndSession, onClearSelection, onBookSlot }: ChargingSessionProps) {
+export default function ChargingSession({ station, vehicle, onEndSession, onClearSelection, onBookSlot, isGuest }: ChargingSessionProps) {
   const [isCharging, setIsCharging] = useState(false);
   const [sessionFinished, setSessionFinished] = useState(false);
   const [elapsedTime, setElapsedTime] = useState(0);
@@ -79,6 +80,18 @@ export default function ChargingSession({ station, vehicle, onEndSession, onClea
     const s = Math.floor(seconds % 60).toString().padStart(2, '0');
     return `${h}:${m}:${s}`;
   };
+
+  const handleBookSlotClick = () => {
+    if (isGuest) {
+      toast({
+        variant: "destructive",
+        title: "Sign In Required",
+        description: "Please sign in to book a charging slot.",
+      });
+    } else {
+      onBookSlot();
+    }
+  }
 
   if (!station) {
     // This component now returns null if no station is selected,
@@ -166,7 +179,7 @@ export default function ChargingSession({ station, vehicle, onEndSession, onClea
                 <BatteryCharging className="mr-2 h-4 w-4" /> Start Charging
             </Button>
             {station.hasSlotBooking && (
-                <Button onClick={onBookSlot} className="w-full" variant="outline">
+                <Button onClick={handleBookSlotClick} className="w-full" variant="outline" disabled={isGuest}>
                     <CalendarClock className="mr-2 h-4 w-4" /> Book Slot
                 </Button>
             )}

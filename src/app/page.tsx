@@ -17,6 +17,7 @@ import { SidebarProvider, Sidebar, SidebarInset, SidebarContent, SidebarRail } f
 import Header from '@/components/charge-one/Header';
 import { formatDuration, formatDistance } from './utils';
 import { add } from 'date-fns';
+import { createBooking, getUserBookings } from '@/lib/firestore';
 
 interface LiveJourneyData {
     distance: string;
@@ -68,6 +69,18 @@ function HomePageContent() {
       }
     }
   }, [user, loading, router, isGuest]);
+
+  useEffect(() => {
+    // Fetch user bookings when authenticated
+    if (user) {
+        getUserBookings(user.uid)
+            .then(setBookedStationIds)
+            .catch(error => {
+                console.error("Failed to fetch bookings:", error);
+                toast({ variant: 'destructive', title: 'Could not load your bookings.' });
+            });
+    }
+  }, [user, toast]);
 
   useEffect(() => {
     if (isJourneyStarted && initialTripData) {
@@ -205,13 +218,35 @@ function HomePageContent() {
     }
   }
 
-  const handleBookingConfirm = (date: Date, time: string) => {
+  const handleBookingConfirm = async (date: Date, time: string) => {
     setIsBookingOpen(false);
-    if (selectedStation) {
+    if (!selectedStation) return;
+    if (!user) {
+        toast({
+            variant: "destructive",
+            title: "Authentication Required",
+            description: "You must be signed in to book a slot.",
+        });
+        return;
+    }
+
+    const [hours, minutes] = time.split(':').map(Number);
+    const bookingDateTime = new Date(date);
+    bookingDateTime.setHours(hours, minutes, 0, 0);
+
+    try {
+        await createBooking(user.uid, selectedStation, bookingDateTime);
         setBookedStationIds(prev => [...prev, selectedStation.id]);
         toast({
             title: "Slot Booked!",
             description: `Your slot at ${selectedStation?.name} is confirmed for ${date.toLocaleDateString()} at ${time}.`,
+        });
+    } catch (error) {
+        console.error("Booking failed:", error);
+        toast({
+            variant: 'destructive',
+            title: 'Booking Failed',
+            description: 'Could not save your booking. Please try again.',
         });
     }
   }
@@ -259,6 +294,7 @@ function HomePageContent() {
                   isBookingOpen={isBookingOpen}
                   setIsBookingOpen={setIsBookingOpen}
                   onBookingConfirm={handleBookingConfirm}
+                  isGuest={isGuest}
               />
           </SidebarContent>
         </Sidebar>
