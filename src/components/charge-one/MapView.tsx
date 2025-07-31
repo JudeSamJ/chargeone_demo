@@ -11,7 +11,7 @@ import { mapStylesLight } from '@/lib/map-styles-light';
 import { mapStylesDark } from '@/lib/map-styles-dark';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Badge } from '../ui/badge';
-import { Zap, Plug, CircleDotDashed } from 'lucide-react';
+import { Zap, Plug, CircleDotDashed, CalendarCheck } from 'lucide-react';
 
 
 const mapContainerStyle = {
@@ -242,6 +242,8 @@ export default function MapView({
     if (loadError) return <div className="flex items-center justify-center h-full w-full bg-muted rounded-lg"><p>Error loading map</p></div>;
     if (!isLoaded) return <div className="flex items-center justify-center h-full w-full bg-muted rounded-lg"><p>Loading Map...</p></div>;
 
+    const activeStation = stations.find(s => s.id === activeMarker);
+
     return (
         <GoogleMap
             mapContainerStyle={mapContainerStyle}
@@ -284,31 +286,37 @@ export default function MapView({
                     />
                 ))}
 
-                {activeMarker && stations.find(s => s.id === activeMarker) && (
+                {activeStation && (
                     <InfoWindowF
-                        position={stations.find(s => s.id === activeMarker)!}
+                        position={{ lat: activeStation.lat, lng: activeStation.lng }}
                         onCloseClick={() => setActiveMarker(null)}
                         options={{ pixelOffset: new google.maps.Size(0, -30) }}
                     >
                         <div className="p-1 max-w-xs">
-                           <h4 className="font-bold text-base mb-1">{stations.find(s => s.id === activeMarker)?.name}</h4>
+                           <h4 className="font-bold text-base mb-1">{activeStation.name}</h4>
                            <div className="flex flex-col gap-2 text-sm">
                                 <div className="flex items-center gap-2">
                                     <CircleDotDashed className="h-4 w-4 text-muted-foreground" /> 
-                                    <Badge variant={stations.find(s => s.id === activeMarker)?.status === 'available' ? 'default' : 'destructive'} className="capitalize">
-                                        {stations.find(s => s.id === activeMarker)?.status.replace('-', ' ')}
+                                    <Badge variant={activeStation.status === 'available' ? 'default' : 'destructive'} className="capitalize">
+                                        {activeStation.status.replace('-', ' ')}
                                     </Badge>
                                 </div>
                                <div className="flex items-center gap-2">
                                    <Zap className="h-4 w-4 text-muted-foreground" />
-                                   <span>{stations.find(s => s.id === activeMarker)?.power} kW</span>
+                                   <span>{activeStation.power} kW</span>
                                </div>
                                <div className="flex items-center gap-2">
                                    <Plug className="h-4 w-4 text-muted-foreground" />
                                    <div className="flex gap-1">
-                                    {stations.find(s => s.id === activeMarker)?.connectors.map(c => <Badge key={c} variant="secondary">{c}</Badge>)}
+                                    {activeStation.connectors.map(c => <Badge key={c} variant="secondary">{c}</Badge>)}
                                    </div>
                                </div>
+                               {activeStation.hasSlotBooking && (
+                                <div className="flex items-center gap-2">
+                                    <CalendarCheck className="h-4 w-4 text-muted-foreground" />
+                                    <span>Slot booking available</span>
+                                </div>
+                               )}
                            </div>
                         </div>
                     </InfoWindowF>
