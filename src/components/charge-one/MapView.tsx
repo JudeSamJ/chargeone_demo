@@ -50,10 +50,20 @@ export default function MapView({ onStationsFound, stations, onStationClick, rou
     const { theme } = useTheme();
     const stationsFetchedRef = useRef(false);
     const lastRerouteTimeRef = useRef<number>(0);
+    const initialLocationSetRef = useRef(false);
+
 
     const onMapLoad = useCallback((map: google.maps.Map) => {
         mapRef.current = map;
     }, []);
+
+    useEffect(() => {
+        if (mapRef.current && currentLocation && !initialLocationSetRef.current) {
+            mapRef.current.panTo(currentLocation);
+            mapRef.current.setZoom(14);
+            initialLocationSetRef.current = true;
+        }
+    }, [currentLocation]);
 
     useEffect(() => {
         if (isJourneyStarted && mapRef.current && currentLocation) {
@@ -86,18 +96,8 @@ export default function MapView({ onStationsFound, stations, onStationClick, rou
                         const now = Date.now();
                         // Throttle re-routing checks to every 10 seconds
                         if (now - lastRerouteTimeRef.current > 10000) {
-                            const userLocationOnPath = google.maps.geometry.poly.isLocationOnEdge(
-                                new google.maps.LatLng(currentPos),
-                                new google.maps.Polyline({ path: decodedPath }),
-                                1e-3 // Tolerance
-                            );
-                            
-                            // A more robust check might involve distance from polyline, but this is simpler
-                            // A simple proxy is to check if the user is near any point on the line.
-                            // The `isLocationOnEdge` is often too strict.
-                            // Let's find the distance to the polyline instead.
                              const userLatLng = new google.maps.LatLng(currentPos.lat, currentPos.lng);
-                             const distance = google.maps.geometry.spherical.computeDistanceBetween(
+                             const distanceToRoute = google.maps.geometry.spherical.computeDistanceBetween(
                                 userLatLng,
                                 // Find closest point on path
                                 new google.maps.Polyline({path: decodedPath}).getPath().getArray().reduce((prev, curr) => {
@@ -107,11 +107,13 @@ export default function MapView({ onStationsFound, stations, onStationClick, rou
                                 })
                              );
 
-                            if (!userLocationOnPath && route.routes[0]?.legs[0]?.end_location) {
+                            if (distanceToRoute > REROUTE_THRESHOLD && route.routes[0]?.legs[0]?.end_address) {
                                 lastRerouteTimeRef.current = now;
                                 toast({ title: "Off Route", description: "Recalculating..." });
                                 const destination = route.routes[0].legs[0].end_address;
-                                onReRoute(`${currentPos.lat},${currentPos.lng}`, destination);
+                                if (destination) {
+                                    onReRoute(`${currentPos.lat},${currentPos.lng}`, destination);
+                                }
                             }
                         }
                     }
