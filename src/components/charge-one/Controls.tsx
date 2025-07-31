@@ -10,7 +10,7 @@ import RechargeDialog from "./RechargeDialog";
 import LiveNavigationCard from "./LiveNavigationCard";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
-import { Navigation, CheckCircle } from 'lucide-react';
+import { Navigation, X } from 'lucide-react';
 
 interface LiveJourneyData {
     distance: string;
@@ -72,6 +72,11 @@ export default function Controls({
                     <Navigation className="mr-2" /> Start Journey
                 </Button>
             </CardContent>
+             <CardFooter>
+                 <Button variant="outline" onClick={onClearRoute} className="w-full">
+                    <X className="mr-2 h-4 w-4" /> Clear Route
+                 </Button>
+            </CardFooter>
         </Card>
     );
 
