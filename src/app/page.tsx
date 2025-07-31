@@ -136,11 +136,25 @@ function HomePageContent() {
   };
   
   const handleStartJourney = () => {
-    setIsJourneyStarted(true);
-    toast({
-        title: "Journey Started!",
-        description: "Live tracking is now active. The map will follow your location.",
-    });
+    const leg = route?.routes[0]?.legs[0];
+    if (leg) {
+        setIsJourneyStarted(true);
+        setLiveJourneyData({
+            distance: leg.distance?.text || 'N/A',
+            duration: leg.duration?.text || 'N/A',
+            endAddress: leg.end_address || 'Destination',
+        });
+        toast({
+            title: "Journey Started!",
+            description: "Live tracking is now active. The map will follow your location.",
+        });
+    } else {
+        toast({
+            variant: 'destructive',
+            title: "Could not start journey.",
+            description: "Route data is missing.",
+        })
+    }
   }
 
   const handleStationsFound = useCallback((foundStations: Station[]) => {
