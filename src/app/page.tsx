@@ -115,13 +115,19 @@ function HomePageContent() {
     });
   }
   
-  const handleRouteUpdate = (result: PlanRouteOutput) => {
+  const handleRouteUpdate = (result: PlanRouteOutput | null) => {
+    if (!result) {
+        setRoute(null);
+        setStations([]);
+        setInitialTripData(null);
+        setLiveJourneyData(null);
+        return;
+    }
+
     setRoute(result.route);
     setStations(result.chargingStations);
     setInitialTripData({ distance: result.totalDistance, duration: result.totalDuration });
-    setLiveJourneyData(null);
-
-
+    
     const leg = result.route.routes[0]?.legs[0];
     if (leg) {
         const arrivalTime = new Date(Date.now() + result.totalDuration * 1000);
@@ -131,6 +137,8 @@ function HomePageContent() {
             endAddress: leg.end_address || 'Destination',
             estimatedArrivalTime: arrivalTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         });
+    } else {
+        setLiveJourneyData(null);
     }
   }
 
@@ -140,9 +148,9 @@ function HomePageContent() {
         return;
     }
     setIsPlanningRoute(true);
-    setRoute(null);
-    setStations([]);
+    handleRouteUpdate(null);
     setSelectedStation(null);
+
     try {
         const result = await planRoute({
             origin,
@@ -159,11 +167,11 @@ function HomePageContent() {
   };
 
   const handleClearRoute = () => {
-    setRoute(null);
+    handleRouteUpdate(null);
     setSelectedStation(null);
     setIsJourneyStarted(false);
     setLiveJourneyData(null);
-    setInitialTripData(null);
+
     if (currentLocation) {
         findStations({ latitude: currentLocation.lat, longitude: currentLocation.lng, radius: 10000 })
             .then(setStations)
@@ -184,32 +192,12 @@ function HomePageContent() {
             title: "Journey Started!",
             description: "Live tracking is now active. The map will follow your location.",
         });
-    } else if (route) {
-        // If liveJourneyData is null for some reason but we have a route, try to create it.
-        const leg = route.routes[0]?.legs[0];
-        const duration = initialTripData?.duration || leg?.duration?.value || 0;
-        const distance = initialTripData?.distance || leg?.distance?.value || 0;
-
-        if (leg) {
-             const arrivalTime = new Date(Date.now() + duration * 1000);
-             setLiveJourneyData({
-                distance: formatDistance(distance),
-                duration: formatDuration(duration),
-                endAddress: leg.end_address || 'Destination',
-                estimatedArrivalTime: arrivalTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-             });
-             setIsJourneyStarted(true);
-             toast({
-                title: "Journey Started!",
-                description: "Live tracking is now active. The map will follow your location.",
-            });
-        } else {
-             toast({
-                variant: 'destructive',
-                title: "Could not start journey.",
-                description: "Route data is missing.",
-            });
-        }
+    } else {
+         toast({
+            variant: 'destructive',
+            title: "Could not start journey.",
+            description: "Route data is missing or incomplete.",
+        });
     }
   }
 
