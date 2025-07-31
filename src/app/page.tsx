@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, Suspense, useEffect, useCallback } from 'react';
-import type { Station, Vehicle } from '@/lib/types';
+import type { Station, Vehicle, PlanRouteOutput } from '@/lib/types';
 import { defaultVehicle } from '@/lib/mock-data';
 import MapView from '@/components/charge-one/MapView';
 import { Toaster } from '@/components/ui/toaster';
@@ -16,6 +16,12 @@ import Controls from '@/components/charge-one/Controls';
 import { SidebarProvider, Sidebar, SidebarInset, SidebarContent, SidebarRail } from '@/components/ui/sidebar';
 import Header from '@/components/charge-one/Header';
 
+interface LiveJourneyData {
+    distance: string;
+    duration: string;
+    endAddress: string;
+}
+
 function HomePageContent() {
   const [stations, setStations] = useState<Station[]>([]);
   const [selectedStation, setSelectedStation] = useState<Station | null>(null);
@@ -26,6 +32,7 @@ function HomePageContent() {
   const [isPlanningRoute, setIsPlanningRoute] = useState(false);
   const [currentLocation, setCurrentLocation] = useState<google.maps.LatLngLiteral | null>(null);
   const [isJourneyStarted, setIsJourneyStarted] = useState(false);
+  const [liveJourneyData, setLiveJourneyData] = useState<LiveJourneyData | null>(null);
 
 
   const { toast } = useToast();
@@ -69,6 +76,22 @@ function HomePageContent() {
         description: `Successfully added ₹${amount.toFixed(2)} to your wallet.`,
     });
   }
+  
+  const handleRouteUpdate = (result: PlanRouteOutput) => {
+    setRoute(result.route);
+    setStations(result.chargingStations);
+
+    const leg = result.route.routes[0]?.legs[0];
+    if (leg) {
+        setLiveJourneyData({
+            distance: leg.distance?.text || 'N/A',
+            duration: leg.duration?.text || 'N/A',
+            endAddress: leg.end_address || 'Destination',
+        });
+    } else {
+        setLiveJourneyData(null);
+    }
+  }
 
   const handlePlanRoute = async (origin: string, destination: string) => {
     if (!userVehicle) {
@@ -85,8 +108,7 @@ function HomePageContent() {
             destination,
             vehicle: userVehicle
         });
-        setRoute(result.route);
-        setStations(result.chargingStations);
+        handleRouteUpdate(result);
     } catch (error) {
         console.error("Failed to plan route:", error);
         toast({ variant: 'destructive', title: 'Failed to plan route.' });
@@ -99,6 +121,7 @@ function HomePageContent() {
     setRoute(null);
     setSelectedStation(null);
     setIsJourneyStarted(false);
+    setLiveJourneyData(null);
     if (currentLocation) {
         findStations({ latitude: currentLocation.lat, longitude: currentLocation.lng, radius: 10000 })
             .then(setStations)
@@ -156,6 +179,7 @@ function HomePageContent() {
                   onClearRoute={handleClearRoute}
                   isJourneyStarted={isJourneyStarted}
                   onStartJourney={handleStartJourney}
+                  liveJourneyData={liveJourneyData}
               />
           </SidebarContent>
         </Sidebar>
@@ -169,6 +193,7 @@ function HomePageContent() {
                 onLocationUpdate={setCurrentLocation}
                 currentLocation={currentLocation}
                 isJourneyStarted={isJourneyStarted}
+                onReRoute={handlePlanRoute}
             />
         </SidebarInset>
         <Toaster />

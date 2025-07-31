@@ -24,6 +24,9 @@ const defaultCenter = {
   lng: 77.2090
 };
 
+// Distance in meters from the route polyline to trigger a re-route
+const REROUTE_THRESHOLD = 500; 
+
 interface MapViewProps {
   onStationsFound: (stations: Station[]) => void;
   onStationClick: (station: Station) => void;
@@ -32,12 +35,13 @@ interface MapViewProps {
   onLocationUpdate: (location: google.maps.LatLngLiteral) => void;
   currentLocation: google.maps.LatLngLiteral | null;
   isJourneyStarted: boolean;
+  onReRoute: (origin: string, destination: string) => void;
 }
 
-export default function MapView({ onStationsFound, stations, onStationClick, route, onLocationUpdate, currentLocation, isJourneyStarted }: MapViewProps) {
+export default function MapView({ onStationsFound, stations, onStationClick, route, onLocationUpdate, currentLocation, isJourneyStarted, onReRoute }: MapViewProps) {
     const { isLoaded, loadError } = useJsApiLoader({
         googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "",
-        libraries: ['places', 'geometry'], // Add geometry library for polyline decoding
+        libraries: ['places', 'geometry'], 
     });
     
     const [center, setCenter] = useState(defaultCenter);
@@ -45,6 +49,7 @@ export default function MapView({ onStationsFound, stations, onStationClick, rou
     const mapRef = useRef<google.maps.Map | null>(null);
     const { theme } = useTheme();
     const stationsFetchedRef = useRef(false);
+    const lastRerouteTimeRef = useRef<number>(0);
 
     const onMapLoad = useCallback((map: google.maps.Map) => {
         mapRef.current = map;
@@ -53,19 +58,21 @@ export default function MapView({ onStationsFound, stations, onStationClick, rou
     useEffect(() => {
         if (isJourneyStarted && mapRef.current && currentLocation) {
             mapRef.current.panTo(currentLocation);
+            mapRef.current.setZoom(16);
         }
     }, [isJourneyStarted, currentLocation]);
 
-    // This effect will reset the station fetching flag when the route is cleared.
     useEffect(() => {
         if (!route) {
             stationsFetchedRef.current = false;
         }
     }, [route]);
 
+    const decodedPath = route && isLoaded ? google.maps.geometry.encoding.decodePath(route.routes[0].overview_polyline.points) : [];
+
     useEffect(() => {
         let watchId: number;
-        if (navigator.geolocation) {
+        if (navigator.geolocation && isLoaded) {
             watchId = navigator.geolocation.watchPosition(
                 (position) => {
                     const currentPos = {
@@ -74,11 +81,41 @@ export default function MapView({ onStationsFound, stations, onStationClick, rou
                     };
                     onLocationUpdate(currentPos);
 
-                    if (isJourneyStarted && mapRef.current) {
-                        mapRef.current.panTo(currentPos);
-                    } else if (!route && !stationsFetchedRef.current) { // Only center on user if there's no active route
-                        setCenter(currentPos);
+                    // Re-routing logic
+                    if (isJourneyStarted && route && decodedPath.length > 0) {
+                        const now = Date.now();
+                        // Throttle re-routing checks to every 10 seconds
+                        if (now - lastRerouteTimeRef.current > 10000) {
+                            const userLocationOnPath = google.maps.geometry.poly.isLocationOnEdge(
+                                new google.maps.LatLng(currentPos),
+                                new google.maps.Polyline({ path: decodedPath }),
+                                1e-3 // Tolerance
+                            );
+                            
+                            // A more robust check might involve distance from polyline, but this is simpler
+                            // A simple proxy is to check if the user is near any point on the line.
+                            // The `isLocationOnEdge` is often too strict.
+                            // Let's find the distance to the polyline instead.
+                             const userLatLng = new google.maps.LatLng(currentPos.lat, currentPos.lng);
+                             const distance = google.maps.geometry.spherical.computeDistanceBetween(
+                                userLatLng,
+                                // Find closest point on path
+                                new google.maps.Polyline({path: decodedPath}).getPath().getArray().reduce((prev, curr) => {
+                                    const prevDistance = google.maps.geometry.spherical.computeDistanceBetween(userLatLng, prev);
+                                    const currDistance = google.maps.geometry.spherical.computeDistanceBetween(userLatLng, curr);
+                                    return prevDistance < currDistance ? prev : curr;
+                                })
+                             );
+
+                            if (!userLocationOnPath && route.routes[0]?.legs[0]?.end_location) {
+                                lastRerouteTimeRef.current = now;
+                                toast({ title: "Off Route", description: "Recalculating..." });
+                                const destination = route.routes[0].legs[0].end_address;
+                                onReRoute(`${currentPos.lat},${currentPos.lng}`, destination);
+                            }
+                        }
                     }
+
                     if (!stationsFetchedRef.current && !route) {
                         stationsFetchedRef.current = true;
                         findStations({ latitude: currentPos.lat, longitude: currentPos.lng, radius: 10000 })
@@ -102,9 +139,9 @@ export default function MapView({ onStationsFound, stations, onStationClick, rou
                             });
                     }
                 },
-                { enableHighAccuracy: true }
+                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
             );
-        } else {
+        } else if (!navigator.geolocation) {
              toast({ title: 'Geolocation not supported. Showing default location.' });
              if (!stationsFetchedRef.current && !route) {
                 stationsFetchedRef.current = true;
@@ -122,7 +159,7 @@ export default function MapView({ onStationsFound, stations, onStationClick, rou
                 navigator.geolocation.clearWatch(watchId);
             }
         };
-    }, [isLoaded, onLocationUpdate, toast, route, onStationsFound, isJourneyStarted]);
+    }, [isLoaded, onLocationUpdate, toast, route, onStationsFound, isJourneyStarted, onReRoute, decodedPath]);
 
 
     useEffect(() => {
@@ -131,7 +168,6 @@ export default function MapView({ onStationsFound, stations, onStationClick, rou
             
             const routeBounds = route.routes[0]?.bounds;
             if (routeBounds) {
-                // The bounds object from the Directions API is a JSON literal, not a LatLngBounds object
                 const ne = routeBounds.northeast;
                 const sw = routeBounds.southwest;
                 bounds.extend(new google.maps.LatLng(ne.lat, ne.lng));
@@ -182,8 +218,6 @@ export default function MapView({ onStationsFound, stations, onStationClick, rou
       }
     };
     
-    const decodedPath = route && isLoaded ? google.maps.geometry.encoding.decodePath(route.routes[0].overview_polyline.points) : [];
-
     const destinationMarker = getDestinationMarkerIcon();
 
     if (loadError) return <div className="flex items-center justify-center h-full w-full bg-muted rounded-lg"><p>Error loading map</p></div>;
