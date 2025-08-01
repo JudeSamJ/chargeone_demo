@@ -109,13 +109,13 @@ export default function ChargingSession({ station, vehicle, onEndSession, onClea
                 </div>
                 <CardDescription>Your vehicle charging is complete.</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-3">
                 <div className="flex justify-between items-center p-3 bg-muted rounded-lg">
                     <span className="font-medium">Total Cost</span>
-                    <span className="text-2xl font-bold text-primary">₹{cost.toFixed(2)}</span>
+                    <span className="text-xl font-bold text-primary">₹{cost.toFixed(2)}</span>
                 </div>
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div className="space-y-1"><p className="text-muted-foreground">Station</p><p className="font-medium">{station.name}</p></div>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                    <div className="space-y-1"><p className="text-muted-foreground">Station</p><p className="font-medium truncate">{station.name}</p></div>
                     <div className="space-y-1"><p className="text-muted-foreground">Time Charged</p><p className="font-medium">{formatTime(elapsedTime)}</p></div>
                     <div className="space-y-1"><p className="text-muted-foreground">Energy Added</p><p className="font-medium">{energyAdded.toFixed(2)} kWh</p></div>
                     <div className="space-y-1"><p className="text-muted-foreground">Final Charge</p><p className="font-medium">{Math.min(100, chargePercentage).toFixed(0)}%</p></div>
@@ -137,38 +137,38 @@ export default function ChargingSession({ station, vehicle, onEndSession, onClea
       <CardHeader>
         <div className="flex justify-between items-start">
             <div>
-                <CardTitle>{station.name}</CardTitle>
-                <CardDescription>{station.location}</CardDescription>
+                <CardTitle className="truncate">{station.name}</CardTitle>
+                <CardDescription className="truncate">{station.location}</CardDescription>
             </div>
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onClearSelection}>
+            <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0" onClick={onClearSelection}>
                 <X className="h-4 w-4" />
                 <span className="sr-only">Close</span>
             </Button>
         </div>
       </CardHeader>
-      <CardContent className="flex flex-col items-center justify-center flex-grow">
-        <Bolt className={`h-16 w-16 text-primary ${isCharging ? 'animate-pulse' : ''}`} />
-        <p className="text-4xl font-bold mt-4 font-headline">{Math.min(100, chargePercentage).toFixed(0)}%</p>
-        <Progress value={Math.min(100, chargePercentage)} className="w-full max-w-xs mt-4" />
-        <div className="grid grid-cols-3 gap-4 mt-8 w-full max-w-md text-center">
+      <CardContent className="flex flex-col items-center justify-center flex-grow py-0">
+        <Bolt className={`h-12 w-12 text-primary ${isCharging ? 'animate-pulse' : ''}`} />
+        <p className="text-3xl font-bold mt-2 font-headline">{Math.min(100, chargePercentage).toFixed(0)}%</p>
+        <Progress value={Math.min(100, chargePercentage)} className="w-full max-w-xs mt-2" />
+        <div className="grid grid-cols-3 gap-2 mt-4 w-full max-w-md text-center">
             <div>
-                <Timer className="h-6 w-6 mx-auto text-muted-foreground" />
-                <p className="mt-1 font-bold text-lg">{formatTime(elapsedTime)}</p>
+                <Timer className="h-5 w-5 mx-auto text-muted-foreground" />
+                <p className="mt-1 font-bold text-base">{formatTime(elapsedTime)}</p>
                 <p className="text-xs text-muted-foreground">Time</p>
             </div>
             <div>
-                <BatteryCharging className="h-6 w-6 mx-auto text-muted-foreground" />
-                <p className="mt-1 font-bold text-lg">{energyAdded.toFixed(2)} kWh</p>
-                <p className="text-xs text-muted-foreground">Energy</p>
+                <BatteryCharging className="h-5 w-5 mx-auto text-muted-foreground" />
+                <p className="mt-1 font-bold text-base">{energyAdded.toFixed(2)}</p>
+                <p className="text-xs text-muted-foreground">kWh</p>
             </div>
             <div>
-                <Power className="h-6 w-6 mx-auto text-muted-foreground" />
-                <p className="mt-1 font-bold text-lg">₹{cost.toFixed(2)}</p>
+                <Power className="h-5 w-5 mx-auto text-muted-foreground" />
+                <p className="mt-1 font-bold text-base">₹{cost.toFixed(2)}</p>
                 <p className="text-xs text-muted-foreground">Est. Cost</p>
             </div>
         </div>
       </CardContent>
-      <CardFooter className="flex flex-col gap-2">
+      <CardFooter className="flex flex-col gap-2 pt-4">
         {isCharging ? (
           <Button onClick={handleStop} variant="destructive" className="w-full">
             <Power className="mr-2 h-4 w-4" /> Stop Charging
