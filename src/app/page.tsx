@@ -26,10 +26,12 @@ interface LiveJourneyData {
     estimatedArrivalTime: string | null;
 }
 
+const BOOKING_FEE = 20;
+
 function HomePageContent() {
   const [stations, setStations] = useState<Station[]>([]);
   const [selectedStation, setSelectedStation] = useState<Station | null>(null);
-  const [walletBalance, setWalletBalance] = useState(0);
+  const [walletBalance, setWalletBalance] = useState(1000); // Start with some balance
   const [isRechargeOpen, setIsRechargeOpen] = useState(false);
   const [isBookingOpen, setIsBookingOpen] = useState(false);
   const [bookedStationIds, setBookedStationIds] = useState<string[]>([]);
@@ -121,6 +123,10 @@ function HomePageContent() {
   const handleEndSession = (cost: number) => {
     setWalletBalance((prev) => prev - cost);
     setSelectedStation(null);
+    // If this station was a booked one, we can now clear the booking
+    if(selectedStation && bookedStationIds.includes(selectedStation.id)){
+        setBookedStationIds(prev => prev.filter(id => id !== selectedStation.id))
+    }
   };
 
   const handleRecharge = (amount: number) => {
@@ -229,6 +235,23 @@ function HomePageContent() {
         });
         return;
     }
+    if (bookedStationIds.length > 0) {
+         toast({
+            variant: "destructive",
+            title: "Active Booking Exists",
+            description: "You can only have one active booking at a time.",
+        });
+        return;
+    }
+    if (walletBalance < BOOKING_FEE) {
+         toast({
+            variant: "destructive",
+            title: "Insufficient Balance",
+            description: `A non-refundable fee of ₹${BOOKING_FEE.toFixed(2)} is required to book a slot.`,
+        });
+        return;
+    }
+
 
     const [hours, minutes] = time.split(':').map(Number);
     const bookingDateTime = new Date(date);
@@ -237,9 +260,10 @@ function HomePageContent() {
     try {
         await createBooking(user.uid, selectedStation, bookingDateTime);
         setBookedStationIds(prev => [...prev, selectedStation.id]);
+        setWalletBalance(prev => prev - BOOKING_FEE);
         toast({
             title: "Slot Booked!",
-            description: `Your slot at ${selectedStation?.name} is confirmed for ${date.toLocaleDateString()} at ${time}.`,
+            description: `Your slot at ${selectedStation?.name} is confirmed. A fee of ₹${BOOKING_FEE.toFixed(2)} has been deducted.`,
         });
     } catch (error) {
         console.error("Booking failed:", error);
@@ -295,6 +319,7 @@ function HomePageContent() {
                   setIsBookingOpen={setIsBookingOpen}
                   onBookingConfirm={handleBookingConfirm}
                   isGuest={isGuest}
+                  hasActiveBooking={bookedStationIds.length > 0}
               />
           </SidebarContent>
         </Sidebar>

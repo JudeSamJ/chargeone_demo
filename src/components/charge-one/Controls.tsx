@@ -41,6 +41,7 @@ interface ControlsProps {
     setIsBookingOpen: (isOpen: boolean) => void;
     onBookingConfirm: (date: Date, time: string) => void;
     isGuest: boolean;
+    hasActiveBooking: boolean;
 }
 
 export default function Controls({
@@ -63,7 +64,8 @@ export default function Controls({
     isBookingOpen,
     setIsBookingOpen,
     onBookingConfirm,
-    isGuest
+    isGuest,
+    hasActiveBooking
 }: ControlsProps) {
 
     const ActiveRouteCard = () => (
@@ -103,6 +105,7 @@ export default function Controls({
                         vehicle={userVehicle}
                         onBookSlot={() => setIsBookingOpen(true)}
                         isGuest={isGuest}
+                        hasActiveBooking={hasActiveBooking}
                     />
                 ) : isJourneyStarted && liveJourneyData ? (
                     <LiveNavigationCard 

@@ -16,9 +16,10 @@ interface ChargingSessionProps {
   onClearSelection: () => void;
   onBookSlot: () => void;
   isGuest: boolean;
+  hasActiveBooking: boolean;
 }
 
-export default function ChargingSession({ station, vehicle, onEndSession, onClearSelection, onBookSlot, isGuest }: ChargingSessionProps) {
+export default function ChargingSession({ station, vehicle, onEndSession, onClearSelection, onBookSlot, isGuest, hasActiveBooking }: ChargingSessionProps) {
   const [isCharging, setIsCharging] = useState(false);
   const [sessionFinished, setSessionFinished] = useState(false);
   const [elapsedTime, setElapsedTime] = useState(0);
@@ -88,9 +89,17 @@ export default function ChargingSession({ station, vehicle, onEndSession, onClea
         title: "Sign In Required",
         description: "Please sign in to book a charging slot.",
       });
-    } else {
-      onBookSlot();
+      return;
     }
+    if (hasActiveBooking) {
+      toast({
+        variant: "destructive",
+        title: "Active Booking Exists",
+        description: "You already have an active booking at another station.",
+      });
+      return;
+    }
+    onBookSlot();
   }
 
   if (!station) {
@@ -179,7 +188,13 @@ export default function ChargingSession({ station, vehicle, onEndSession, onClea
                 <BatteryCharging className="mr-2 h-4 w-4" /> Start Charging
             </Button>
             {station.hasSlotBooking && (
-                <Button onClick={handleBookSlotClick} className="w-full" variant="outline" disabled={isGuest}>
+                <Button 
+                    onClick={handleBookSlotClick} 
+                    className="w-full" 
+                    variant="outline" 
+                    disabled={isGuest || hasActiveBooking}
+                    title={hasActiveBooking ? "You already have an active booking" : "Book a charging slot"}
+                >
                     <CalendarClock className="mr-2 h-4 w-4" /> Book Slot
                 </Button>
             )}
