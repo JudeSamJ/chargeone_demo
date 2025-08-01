@@ -17,7 +17,6 @@ import { SidebarProvider, Sidebar, SidebarInset, SidebarContent, SidebarRail } f
 import Header from '@/components/charge-one/Header';
 import { formatDuration, formatDistance } from './utils';
 import { add } from 'date-fns';
-import { createBooking, getUserBookings } from '@/lib/firestore';
 
 interface LiveJourneyData {
     distance: string;
@@ -25,8 +24,6 @@ interface LiveJourneyData {
     endAddress: string;
     estimatedArrivalTime: string | null;
 }
-
-const BOOKING_FEE = 20;
 
 function HomePageContent() {
   const [stations, setStations] = useState<Station[]>([]);
@@ -73,18 +70,6 @@ function HomePageContent() {
   }, [user, loading, router, isGuest]);
 
   useEffect(() => {
-    // Fetch user bookings when authenticated
-    if (user) {
-        getUserBookings(user.uid)
-            .then(setBookedStationIds)
-            .catch(error => {
-                console.error("Failed to fetch bookings:", error);
-                toast({ variant: 'destructive', title: 'Could not load your bookings.' });
-            });
-    }
-  }, [user, toast]);
-
-  useEffect(() => {
     if (isJourneyStarted && initialTripData) {
         const startTime = Date.now();
         
@@ -123,7 +108,6 @@ function HomePageContent() {
   const handleEndSession = (cost: number) => {
     setWalletBalance((prev) => prev - cost);
     setSelectedStation(null);
-    // If this station was a booked one, we can now clear the booking
     if(selectedStation && bookedStationIds.includes(selectedStation.id)){
         setBookedStationIds(prev => prev.filter(id => id !== selectedStation.id))
     }
@@ -215,63 +199,18 @@ function HomePageContent() {
             title: "Journey Started!",
             description: "Live tracking is now active. The map will follow your location.",
         });
-    } else {
-         toast({
-            variant: 'destructive',
-            title: "Could not start journey.",
-            description: "Route data is missing or incomplete.",
-        });
     }
   }
 
-  const handleBookingConfirm = async (date: Date, time: string) => {
+  const handleBookingConfirm = (date: Date, time: string) => {
     setIsBookingOpen(false);
-    if (!selectedStation) return;
-    if (!user) {
-        toast({
-            variant: "destructive",
-            title: "Authentication Required",
-            description: "You must be signed in to book a slot.",
-        });
-        return;
-    }
-    if (bookedStationIds.length > 0) {
-         toast({
-            variant: "destructive",
-            title: "Active Booking Exists",
-            description: "You can only have one active booking at a time.",
-        });
-        return;
-    }
-    if (walletBalance < BOOKING_FEE) {
-         toast({
-            variant: "destructive",
-            title: "Insufficient Balance",
-            description: `A non-refundable fee of ₹${BOOKING_FEE.toFixed(2)} is required to book a slot.`,
-        });
-        return;
-    }
-
-
-    const [hours, minutes] = time.split(':').map(Number);
-    const bookingDateTime = new Date(date);
-    bookingDateTime.setHours(hours, minutes, 0, 0);
-
-    try {
-        await createBooking(user.uid, selectedStation, bookingDateTime);
-        setBookedStationIds(prev => [...prev, selectedStation.id]);
-        setWalletBalance(prev => prev - BOOKING_FEE);
-        toast({
-            title: "Slot Booked!",
-            description: `Your slot at ${selectedStation?.name} is confirmed. A fee of ₹${BOOKING_FEE.toFixed(2)} has been deducted.`,
-        });
-    } catch (error) {
-        console.error("Booking failed:", error);
-        toast({
-            variant: 'destructive',
-            title: 'Booking Failed',
-            description: 'Could not save your booking. Please try again.',
-        });
+    // TODO: Implement actual booking logic
+    if (selectedStation) {
+      setBookedStationIds(prev => [...prev, selectedStation.id]);
+      toast({
+        title: "Slot Booked!",
+        description: `Your slot at ${selectedStation?.name} is confirmed for ${date.toLocaleDateString()} at ${time}.`,
+      });
     }
   }
 

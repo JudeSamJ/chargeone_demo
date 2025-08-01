@@ -91,14 +91,6 @@ export default function ChargingSession({ station, vehicle, onEndSession, onClea
       });
       return;
     }
-    if (hasActiveBooking) {
-      toast({
-        variant: "destructive",
-        title: "Active Booking Exists",
-        description: "You already have an active booking at another station.",
-      });
-      return;
-    }
     onBookSlot();
   }
 
@@ -156,23 +148,23 @@ export default function ChargingSession({ station, vehicle, onEndSession, onClea
         </div>
       </CardHeader>
       <CardContent className="flex flex-col items-center justify-center flex-grow py-0">
-        <Bolt className={`h-12 w-12 text-primary ${isCharging ? 'animate-pulse' : ''}`} />
-        <p className="text-3xl font-bold mt-2 font-headline">{Math.min(100, chargePercentage).toFixed(0)}%</p>
+        <Bolt className={`h-10 w-10 text-primary ${isCharging ? 'animate-pulse' : ''}`} />
+        <p className="text-2xl font-bold mt-1 font-headline">{Math.min(100, chargePercentage).toFixed(0)}%</p>
         <Progress value={Math.min(100, chargePercentage)} className="w-full max-w-xs mt-2" />
-        <div className="grid grid-cols-3 gap-2 mt-4 w-full max-w-md text-center">
+        <div className="grid grid-cols-3 gap-1 mt-3 w-full max-w-md text-center">
             <div>
-                <Timer className="h-5 w-5 mx-auto text-muted-foreground" />
-                <p className="mt-1 font-bold text-base">{formatTime(elapsedTime)}</p>
+                <Timer className="h-4 w-4 mx-auto text-muted-foreground" />
+                <p className="mt-1 font-bold text-sm">{formatTime(elapsedTime)}</p>
                 <p className="text-xs text-muted-foreground">Time</p>
             </div>
             <div>
-                <BatteryCharging className="h-5 w-5 mx-auto text-muted-foreground" />
-                <p className="mt-1 font-bold text-base">{energyAdded.toFixed(2)}</p>
+                <BatteryCharging className="h-4 w-4 mx-auto text-muted-foreground" />
+                <p className="mt-1 font-bold text-sm">{energyAdded.toFixed(2)}</p>
                 <p className="text-xs text-muted-foreground">kWh</p>
             </div>
             <div>
-                <Power className="h-5 w-5 mx-auto text-muted-foreground" />
-                <p className="mt-1 font-bold text-base">₹{cost.toFixed(2)}</p>
+                <Power className="h-4 w-4 mx-auto text-muted-foreground" />
+                <p className="mt-1 font-bold text-sm">₹{cost.toFixed(2)}</p>
                 <p className="text-xs text-muted-foreground">Est. Cost</p>
             </div>
         </div>
@@ -192,8 +184,7 @@ export default function ChargingSession({ station, vehicle, onEndSession, onClea
                     onClick={handleBookSlotClick} 
                     className="w-full" 
                     variant="outline" 
-                    disabled={isGuest || hasActiveBooking}
-                    title={hasActiveBooking ? "You already have an active booking" : "Book a charging slot"}
+                    disabled={isGuest}
                 >
                     <CalendarClock className="mr-2 h-4 w-4" /> Book Slot
                 </Button>
