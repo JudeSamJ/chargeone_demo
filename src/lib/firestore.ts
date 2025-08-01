@@ -1,8 +1,8 @@
 
 "use server";
 
-import { db } from './firebase-admin'; // Use server-side admin SDK
-import { Timestamp } from 'firebase-admin/firestore';
+import { db } from './firebase'; // Use client-side firebase
+import { collection, addDoc, Timestamp, query, where, getDocs } from 'firebase/firestore';
 import type { Station } from './types';
 
 interface BookingData {
@@ -19,8 +19,8 @@ export const createBooking = async (
     bookingTime: Date
 ): Promise<string> => {
     try {
-        const bookingsCollection = db.collection('bookings');
-        const docRef = await bookingsCollection.add({
+        const bookingsCollection = collection(db, 'bookings');
+        const docRef = await addDoc(bookingsCollection, {
             userId: userId,
             stationId: station.id,
             stationName: station.name,
@@ -36,9 +36,9 @@ export const createBooking = async (
 
 export const getUserBookings = async (userId: string): Promise<string[]> => {
     try {
-        const bookingsCollection = db.collection('bookings');
-        const q = bookingsCollection.where("userId", "==", userId);
-        const querySnapshot = await q.get();
+        const bookingsCollection = collection(db, 'bookings');
+        const q = query(bookingsCollection, where("userId", "==", userId));
+        const querySnapshot = await getDocs(q);
         
         const stationIds: string[] = [];
         querySnapshot.forEach((doc) => {
