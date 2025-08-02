@@ -27,6 +27,7 @@ interface LiveJourneyData {
 
 function HomePageContent() {
   const [stations, setStations] = useState<Station[]>([]);
+  const [requiredStations, setRequiredStations] = useState<Station[]>([]);
   const [selectedStation, setSelectedStation] = useState<Station | null>(null);
   const [walletBalance, setWalletBalance] = useState(0);
   const [isRechargeOpen, setIsRechargeOpen] = useState(false);
@@ -126,12 +127,15 @@ function HomePageContent() {
     if (!result) {
         setRoute(null);
         setStations([]);
+        setRequiredStations([]);
         setInitialTripData(null);
         setLiveJourneyData(null);
         return;
     }
 
     setRoute(result.route);
+    setRequiredStations(result.requiredChargingStations);
+
     // Combine required stations and all other nearby stations, removing duplicates
     const allStations = [...result.requiredChargingStations, ...result.allNearbyStations];
     const uniqueStationIds = new Set();
@@ -206,6 +210,8 @@ function HomePageContent() {
   const handleStartJourney = () => {
     if (route && liveJourneyData) {
         setIsJourneyStarted(true);
+        // When journey starts, only show the required stations on the map.
+        setStations(requiredStations);
         toast({
             title: "Journey Started!",
             description: "Live tracking is now active. The map will follow your location.",
