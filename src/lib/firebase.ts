@@ -3,30 +3,16 @@ import { initializeApp, getApps, getApp, FirebaseApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, Auth } from "firebase/auth";
 import { getFirestore, Firestore } from "firebase/firestore";
 
-const requiredEnvVars = [
-  'NEXT_PUBLIC_FIREBASE_API_KEY',
-  'NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN',
-  'NEXT_PUBLIC_FIREBASE_PROJECT_ID',
-  'NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET',
-  'NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID',
-  'NEXT_PUBLIC_FIREBASE_APP_ID',
-];
-
-const missingEnvVars = requiredEnvVars.filter(key => !process.env[key]);
-
-if (missingEnvVars.length > 0) {
-  throw new Error(`Missing Firebase environment variables: ${missingEnvVars.join(', ')}. Please check your .env file.`);
-}
-
-
+// The configuration is hardcoded here to bypass environment variable loading issues.
+// For production, it is strongly recommended to use environment variables.
 const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
-  measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
+  apiKey: "AIzaSyCTjAWqGUnxDV4YeUxYHbogfRvs5cZTTIg",
+  authDomain: "chargeone.firebaseapp.com",
+  projectId: "chargeone",
+  storageBucket: "chargeone.firebasestorage.app",
+  messagingSenderId: "669583586032",
+  appId: "1:669583586032:web:c0c73391c7eb691c7ec835",
+  measurementId: "",
 };
 
 // Initialize Firebase App
