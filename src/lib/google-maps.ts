@@ -1,8 +1,8 @@
 
-const API_KEY = process.env.GOOGLE_MAPS_API_KEY || process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+const API_KEY = "YOUR_GOOGLE_MAPS_API_KEY";
 
-if (!API_KEY) {
-    throw new Error("Missing GOOGLE_MAPS_API_KEY or NEXT_PUBLIC_GOOGLE_MAPS_API_KEY environment variable. Please add it to your .env file.");
+if (!API_KEY || API_KEY === "YOUR_GOOGLE_MAPS_API_KEY") {
+    console.warn("Using a placeholder Google Maps API Key. Please replace it in src/lib/google-maps.ts");
 }
 
 export async function findPlace(options: { query: string, location: { lat: number, lng: number }, radius: number }) {
