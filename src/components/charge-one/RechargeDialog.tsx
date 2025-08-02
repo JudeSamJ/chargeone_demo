@@ -14,7 +14,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { useRazorpay } from '@/hooks/useRazorpay';
 
 interface RechargeDialogProps {
   isOpen: boolean;
@@ -23,15 +22,44 @@ interface RechargeDialogProps {
   razorpayKeyId?: string;
 }
 
+declare global {
+    interface Window {
+        Razorpay: any;
+    }
+}
+
 export default function RechargeDialog({ isOpen, onOpenChange, onRecharge, razorpayKeyId }: RechargeDialogProps) {
   const [amount, setAmount] = useState('');
   const { toast } = useToast();
-  const [Razorpay, isLoaded] = useRazorpay();
+  const [isRazorpayLoaded, setIsRazorpayLoaded] = useState(false);
 
   useEffect(() => {
-    // This effect can be used to pre-load the script if needed,
-    // although the hook handles loading on first use.
-  }, [isOpen]);
+    const scriptId = 'razorpay-checkout-js';
+    if (document.getElementById(scriptId)) {
+        setIsRazorpayLoaded(true);
+        return;
+    }
+
+    const script = document.createElement('script');
+    script.id = scriptId;
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    script.async = true;
+    script.onload = () => {
+      setIsRazorpayLoaded(true);
+    };
+    script.onerror = () => {
+      console.error('Razorpay script failed to load.');
+      setIsRazorpayLoaded(false);
+      toast({
+          variant: 'destructive',
+          title: 'Payment Error',
+          description: 'Could not load the payment gateway. Please check your connection and try again.'
+      })
+    };
+
+    document.body.appendChild(script);
+
+  }, []);
 
   const handleRechargeClick = () => {
     const rechargeAmount = parseFloat(amount);
@@ -44,11 +72,11 @@ export default function RechargeDialog({ isOpen, onOpenChange, onRecharge, razor
       return;
     }
 
-    if (!isLoaded || !Razorpay) {
+    if (!isRazorpayLoaded || !window.Razorpay) {
         toast({
             variant: "destructive",
             title: "Error",
-            description: "Razorpay script not loaded yet. Please try again in a moment.",
+            description: "Payment gateway is not ready yet. Please try again in a moment.",
         });
         return;
     }
@@ -66,26 +94,26 @@ export default function RechargeDialog({ isOpen, onOpenChange, onRecharge, razor
         onOpenChange(false);
       },
       prefill: {
-        contact: "9000000000"
+        contact: "9000000000",
+        email: "guest@chargeone.com",
+        name: "Guest User"
       },
       notes: {
         address: "ChargeOne Corporate Office"
       },
       theme: {
-        color: "#3399cc"
+        color: "#1976D2" // primary color
       }
     };
     
     try {
-        const rzp1 = new Razorpay(options);
+        const rzp1 = new window.Razorpay(options);
         rzp1.on('payment.failed', function (response: any){
-            if (response.error && response.error.description) {
-               toast({
-                   variant: "destructive",
-                   title: "Payment Failed",
-                   description: response.error.description,
-               });
-            }
+            toast({
+                variant: "destructive",
+                title: "Payment Failed",
+                description: response.error.description || "An unknown error occurred.",
+            });
         });
         rzp1.open();
     } catch (error) {
@@ -131,7 +159,7 @@ export default function RechargeDialog({ isOpen, onOpenChange, onRecharge, razor
             />
           </div>
            <div className="flex flex-col items-center justify-center p-4 rounded-lg bg-muted">
-              <img src="https://razorpay.com/assets/razorpay-logo.svg" alt="Razorpay" className="h-8 mb-2" />
+              <img data-ai-hint="razorpay logo" src="https://razorpay.com/assets/razorpay-logo.svg" alt="Razorpay" className="h-8 mb-2" />
               <p className="text-sm text-muted-foreground">Secure Payments</p>
           </div>
         </div>
@@ -140,7 +168,7 @@ export default function RechargeDialog({ isOpen, onOpenChange, onRecharge, razor
             type="submit" 
             onClick={handleRechargeClick} 
             className="w-full" 
-            disabled={!isLoaded || !razorpayKeyId || parseFloat(amount) <= 0 || isNaN(parseFloat(amount))}
+            disabled={!isRazorpayLoaded || !razorpayKeyId || !amount || parseFloat(amount) <= 0}
           >
             Recharge with Razorpay
           </Button>
