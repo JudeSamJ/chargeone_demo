@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -32,7 +32,6 @@ export default function RechargeDialog({ isOpen, onOpenChange, onRecharge, razor
   const [amount, setAmount] = useState('');
   const { toast } = useToast();
   const [isRazorpayLoaded, setIsRazorpayLoaded] = useState(false);
-  const rzpInstanceRef = useRef<any>(null);
 
   useEffect(() => {
     const scriptId = 'razorpay-checkout-js';
@@ -59,13 +58,6 @@ export default function RechargeDialog({ isOpen, onOpenChange, onRecharge, razor
     };
 
     document.body.appendChild(script);
-    
-    return () => {
-        const rzpScript = document.getElementById(scriptId);
-        if (rzpScript) {
-            // document.body.removeChild(rzpScript);
-        }
-    }
 
   }, [toast]);
   
@@ -111,12 +103,6 @@ export default function RechargeDialog({ isOpen, onOpenChange, onRecharge, razor
       },
       theme: {
         color: "#1976D2" // primary color
-      },
-      modal: {
-          ondismiss: () => {
-              // This is important to allow re-opening the dialog
-              console.log('Payment window dismissed.');
-          }
       }
     };
     
