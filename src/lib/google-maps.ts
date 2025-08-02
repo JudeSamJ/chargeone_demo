@@ -1,14 +1,13 @@
 
-const API_KEY = process.env.GOOGLE_MAPS_API_KEY || process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
-const BASE_URL = "https://maps.googleapis.com/maps/api";
+const API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
 
 if (!API_KEY) {
-    throw new Error("Missing GOOGLE_MAPS_API_KEY or NEXT_PUBLIC_GOOGLE_MAPS_API_KEY environment variable.");
+    throw new Error("Missing NEXT_PUBLIC_GOOGLE_MAPS_API_KEY environment variable.");
 }
 
 export async function findPlace(options: { query: string, location: { lat: number, lng: number }, radius: number }) {
   const { query, location, radius } = options;
-  const url = `${BASE_URL}/place/nearbysearch/json?location=${location.lat},${location.lng}&radius=${radius}&keyword=${encodeURIComponent(query)}&key=${API_KEY}`;
+  const url = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${location.lat},${location.lng}&radius=${radius}&keyword=${encodeURIComponent(query)}&key=${API_KEY}`;
   
   const response = await fetch(url);
   const data = await response.json();
@@ -22,7 +21,7 @@ export async function findPlace(options: { query: string, location: { lat: numbe
 }
 
 export async function getPlaceDetails(placeId: string) {
-    const url = `${BASE_URL}/place/details/json?place_id=${placeId}&key=${API_KEY}`;
+    const url = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&key=${API_KEY}`;
 
     const response = await fetch(url);
     const data = await response.json();
@@ -36,7 +35,7 @@ export async function getPlaceDetails(placeId: string) {
 }
 
 export async function getDirections(origin: string, destination: string) {
-    const url = `${BASE_URL}/directions/json?origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}&key=${API_KEY}`;
+    const url = `https://maps.googleapis.com/maps/api/directions/json?origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}&key=${API_KEY}`;
     
     const response = await fetch(url);
     const data = await response.json();

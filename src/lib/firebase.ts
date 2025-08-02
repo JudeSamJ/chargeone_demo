@@ -16,27 +16,7 @@ const firebaseConfig = {
 // Initialize Firebase App
 let app: FirebaseApp;
 
-// This function throws a clear error if essential Firebase config is missing.
-const validateFirebaseConfig = (config: typeof firebaseConfig) => {
-    const requiredKeys: (keyof typeof firebaseConfig)[] = [
-        'apiKey',
-        'authDomain',
-        'projectId',
-    ];
-    const missingKeys = requiredKeys.filter(key => !config[key]);
-
-    if (missingKeys.length > 0) {
-        throw new Error(
-            `Firebase configuration is missing or incomplete. 
-            Please ensure the following environment variables are set in your .env file: 
-            ${missingKeys.map(key => `NEXT_PUBLIC_FIREBASE_${key.toUpperCase()}`).join(', ')}`
-        );
-    }
-};
-
-
 if (!getApps().length) {
-  validateFirebaseConfig(firebaseConfig);
   app = initializeApp(firebaseConfig);
 } else {
   app = getApp();
