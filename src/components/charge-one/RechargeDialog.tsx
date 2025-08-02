@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -32,6 +32,7 @@ export default function RechargeDialog({ isOpen, onOpenChange, onRecharge, razor
   const [amount, setAmount] = useState('');
   const { toast } = useToast();
   const [isRazorpayLoaded, setIsRazorpayLoaded] = useState(false);
+  const rzpInstanceRef = useRef<any>(null);
 
   useEffect(() => {
     const scriptId = 'razorpay-checkout-js';
@@ -58,12 +59,19 @@ export default function RechargeDialog({ isOpen, onOpenChange, onRecharge, razor
     };
 
     document.body.appendChild(script);
+    
+    return () => {
+        const rzpScript = document.getElementById(scriptId);
+        if (rzpScript) {
+            // document.body.removeChild(rzpScript);
+        }
+    }
 
   }, [toast]);
-
+  
   const handleRechargeClick = () => {
     const rechargeAmount = parseFloat(amount);
-    if (!razorpayKeyId || isNaN(rechargeAmount) || rechargeAmount <= 0) {
+     if (isNaN(rechargeAmount) || rechargeAmount <= 0) {
       toast({
         variant: "destructive",
         title: "Invalid Amount",
@@ -88,7 +96,7 @@ export default function RechargeDialog({ isOpen, onOpenChange, onRecharge, razor
       name: "ChargeOne Wallet",
       description: "Recharge your wallet",
       image: "https://placehold.co/100x100.png",
-      handler: function (response: any) {
+      handler: (response: any) => {
         onRecharge(rechargeAmount);
         setAmount('');
         onOpenChange(false);
@@ -103,17 +111,24 @@ export default function RechargeDialog({ isOpen, onOpenChange, onRecharge, razor
       },
       theme: {
         color: "#1976D2" // primary color
+      },
+      modal: {
+          ondismiss: () => {
+              // This is important to allow re-opening the dialog
+              console.log('Payment window dismissed.');
+          }
       }
     };
     
     try {
         const rzp1 = new window.Razorpay(options);
-        rzp1.on('payment.failed', function (response: any){
+        rzp1.on('payment.failed', (response: any) => {
             toast({
                 variant: "destructive",
                 title: "Payment Failed",
                 description: response.error.description || "An unknown error occurred.",
             });
+             onOpenChange(false);
         });
         rzp1.open();
     } catch (error) {
@@ -125,6 +140,7 @@ export default function RechargeDialog({ isOpen, onOpenChange, onRecharge, razor
         });
     }
   };
+
 
   const quickAmounts = [500, 1000, 2000];
 
@@ -165,7 +181,7 @@ export default function RechargeDialog({ isOpen, onOpenChange, onRecharge, razor
         </div>
         <DialogFooter>
           <Button 
-            type="submit" 
+            type="button" 
             onClick={handleRechargeClick} 
             className="w-full" 
             disabled={!isRazorpayLoaded || !razorpayKeyId || !amount || parseFloat(amount) <= 0}
