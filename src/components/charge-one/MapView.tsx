@@ -58,7 +58,7 @@ export default function MapView({
     bookedStationIds
 }: MapViewProps) {
     const { isLoaded, loadError } = useJsApiLoader({
-        googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "",
+        googleMapsApiKey: "AIzaSyBMltP754BsiINUjJ90C0HE5YE0As2cTcc",
         libraries: ['places', 'geometry'], 
     });
     
