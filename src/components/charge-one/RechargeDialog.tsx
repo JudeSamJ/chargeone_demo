@@ -59,7 +59,7 @@ export default function RechargeDialog({ isOpen, onOpenChange, onRecharge, razor
 
     document.body.appendChild(script);
 
-  }, []);
+  }, [toast]);
 
   const handleRechargeClick = () => {
     const rechargeAmount = parseFloat(amount);
