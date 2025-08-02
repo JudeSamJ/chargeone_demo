@@ -122,7 +122,7 @@ export default function Controls({
                 isOpen={isRechargeOpen}
                 onOpenChange={setIsRechargeOpen}
                 onRecharge={handleRecharge}
-                razorpayKeyId={process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID}
+                razorpayKeyId="rzp_test_C_5yupht83jOWGLVs1XtV8ltyB"
             />
             <BookingDialog
                 isOpen={isBookingOpen}
