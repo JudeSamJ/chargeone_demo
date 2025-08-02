@@ -34,12 +34,14 @@ const planRouteFlow = ai.defineFlow(
     let currentChargeKm = vehicleMaxRangeKm * (vehicle.currentCharge / 100);
     
     const requiredStations: Station[] = [];
+    const allFoundStations: Station[] = [];
     let totalChargingTimeSeconds = 0;
 
     if (!leg.steps || leg.steps.length === 0) {
         return {
             route: directionsResult,
-            chargingStations: [],
+            requiredChargingStations: [],
+            allNearbyStations: [],
             totalDistance: leg.distance?.value || 0,
             totalDuration: leg.duration?.value || 0,
         };
@@ -59,6 +61,13 @@ const planRouteFlow = ai.defineFlow(
                 radius: 50000, // 50km search radius
             });
             
+            // Add all found stations to our list
+            nearbyStations.forEach(s => {
+                if (!allFoundStations.some(fs => fs.id === s.id)) {
+                    allFoundStations.push(s);
+                }
+            });
+
             const bestStation = nearbyStations.find(s => s.status === 'available');
 
             if (bestStation) {
@@ -91,7 +100,8 @@ const planRouteFlow = ai.defineFlow(
 
     return {
       route: directionsResult,
-      chargingStations: requiredStations,
+      requiredChargingStations: requiredStations,
+      allNearbyStations: allFoundStations,
       totalDistance: totalDistanceMeters,
       totalDuration: totalDurationSeconds,
     };

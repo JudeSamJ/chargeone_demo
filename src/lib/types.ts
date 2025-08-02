@@ -52,10 +52,12 @@ export const PlanRouteOutputSchema = z.object({
         typeof data.routes[0].overview_polyline.points === 'string', 
         { message: "Route must have a valid encoded polyline." }
     ),
-    chargingStations: z.array(z.custom<Station>()),
+    requiredChargingStations: z.array(z.custom<Station>()),
+    allNearbyStations: z.array(z.custom<Station>()),
     totalDistance: z.number(), // in meters
     totalDuration: z.number(), // in seconds, including charging time
 });
 
 export type PlanRouteInput = z.infer<typeof PlanRouteInputSchema>;
 export type PlanRouteOutput = z.infer<typeof PlanRouteOutputSchema>;
+

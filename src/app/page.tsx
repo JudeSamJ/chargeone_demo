@@ -28,7 +28,7 @@ interface LiveJourneyData {
 function HomePageContent() {
   const [stations, setStations] = useState<Station[]>([]);
   const [selectedStation, setSelectedStation] = useState<Station | null>(null);
-  const [walletBalance, setWalletBalance] = useState(0); // Start with some balance
+  const [walletBalance, setWalletBalance] = useState(0);
   const [isRechargeOpen, setIsRechargeOpen] = useState(false);
   const [isBookingOpen, setIsBookingOpen] = useState(false);
   const [bookedStationIds, setBookedStationIds] = useState<string[]>([]);
@@ -132,7 +132,18 @@ function HomePageContent() {
     }
 
     setRoute(result.route);
-    setStations(result.chargingStations);
+    // Combine required stations and all other nearby stations, removing duplicates
+    const allStations = [...result.requiredChargingStations, ...result.allNearbyStations];
+    const uniqueStationIds = new Set();
+    const uniqueStations = allStations.filter(station => {
+        if (!uniqueStationIds.has(station.id)) {
+            uniqueStationIds.add(station.id);
+            return true;
+        }
+        return false;
+    });
+    setStations(uniqueStations);
+    
     setInitialTripData({ distance: result.totalDistance, duration: result.totalDuration });
     
     const leg = result.route.routes[0]?.legs[0];
