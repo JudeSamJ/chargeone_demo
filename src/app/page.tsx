@@ -28,7 +28,7 @@ interface LiveJourneyData {
 function HomePageContent() {
   const [stations, setStations] = useState<Station[]>([]);
   const [selectedStation, setSelectedStation] = useState<Station | null>(null);
-  const [walletBalance, setWalletBalance] = useState(1000); // Start with some balance
+  const [walletBalance, setWalletBalance] = useState(0); // Start with some balance
   const [isRechargeOpen, setIsRechargeOpen] = useState(false);
   const [isBookingOpen, setIsBookingOpen] = useState(false);
   const [bookedStationIds, setBookedStationIds] = useState<string[]>([]);
@@ -256,7 +256,7 @@ function HomePageContent() {
                   liveJourneyData={liveJourneyData}
                   isBookingOpen={isBookingOpen}
                   setIsBookingOpen={setIsBookingOpen}
-                  onBookingConfirm={handleBookingConfirm}
+                  onBookingConfirm={onBookingConfirm}
                   isGuest={isGuest}
                   hasActiveBooking={bookedStationIds.length > 0}
               />
