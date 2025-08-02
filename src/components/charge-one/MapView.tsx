@@ -69,10 +69,44 @@ export default function MapView({
     const stationsFetchedRef = useRef(false);
     const lastRerouteTimeRef = useRef<number>(0);
     const initialLocationSetRef = useRef(false);
+    const idleTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
     const onMapLoad = useCallback((map: google.maps.Map) => {
         mapRef.current = map;
     }, []);
+
+    const fetchStationsForView = useCallback(() => {
+        if (!isLoaded || !mapRef.current || route) return;
+
+        const map = mapRef.current;
+        const center = map.getCenter();
+        const bounds = map.getBounds();
+
+        if (!center || !bounds) return;
+
+        const centerLatLng = { lat: center.lat(), lng: center.lng() };
+        
+        // Calculate radius from bounds
+        const ne = bounds.getNorthEast();
+        const radius = google.maps.geometry.spherical.computeDistanceBetween(center, ne);
+        
+        findStations({ latitude: centerLatLng.lat, longitude: centerLatLng.lng, radius })
+            .then(onStationsFound)
+            .catch(err => {
+                console.error("Error finding stations for view:", err);
+                toast({ variant: 'destructive', title: 'Could not find nearby stations for the current view.'});
+            });
+
+    }, [isLoaded, route, onStationsFound, toast]);
+
+    const handleMapIdle = useCallback(() => {
+        if (idleTimeoutRef.current) {
+            clearTimeout(idleTimeoutRef.current);
+        }
+        idleTimeoutRef.current = setTimeout(() => {
+            fetchStationsForView();
+        }, 500); // Debounce to avoid rapid firing
+    }, [fetchStationsForView]);
 
     useEffect(() => {
         if (mapRef.current && currentLocation && !initialLocationSetRef.current) {
@@ -265,6 +299,7 @@ export default function MapView({
             center={defaultCenter}
             zoom={14}
             onLoad={onMapLoad}
+            onIdle={handleMapIdle}
             mapTypeId={mapTypeId}
             options={{
                 disableDefaultUI: true,
@@ -362,3 +397,5 @@ export default function MapView({
         </GoogleMap>
     );
 }
+
+    
