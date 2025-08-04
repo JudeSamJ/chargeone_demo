@@ -89,6 +89,7 @@ export default function RechargeDialog({ isOpen, onOpenChange, onRecharge, razor
       description: "Recharge your wallet",
       image: "https://placehold.co/100x100.png",
       handler: (response: any) => {
+        // This function is called on successful payment
         onRecharge(rechargeAmount);
         setAmount('');
         onOpenChange(false);
@@ -109,6 +110,7 @@ export default function RechargeDialog({ isOpen, onOpenChange, onRecharge, razor
     try {
         const rzp1 = new window.Razorpay(options);
         rzp1.on('payment.failed', (response: any) => {
+            console.error("Razorpay Payment Failed:", response.error);
             toast({
                 variant: "destructive",
                 title: "Payment Failed",
