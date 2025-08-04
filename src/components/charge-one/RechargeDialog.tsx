@@ -59,6 +59,13 @@ export default function RechargeDialog({ isOpen, onOpenChange, onRecharge, razor
 
     document.body.appendChild(script);
 
+    // Cleanup function to remove the script if the component unmounts
+    return () => {
+        const scriptElement = document.getElementById(scriptId);
+        if (scriptElement) {
+            document.body.removeChild(scriptElement);
+        }
+    }
   }, [toast]);
   
   const handleRechargeClick = () => {
@@ -92,7 +99,7 @@ export default function RechargeDialog({ isOpen, onOpenChange, onRecharge, razor
         // This function is called on successful payment
         onRecharge(rechargeAmount);
         setAmount('');
-        onOpenChange(false);
+        onOpenChange(false); // Close dialog on success
       },
       prefill: {
         contact: "9000000000",
@@ -116,7 +123,7 @@ export default function RechargeDialog({ isOpen, onOpenChange, onRecharge, razor
                 title: "Payment Failed",
                 description: response.error.description || "An unknown error occurred.",
             });
-             onOpenChange(false);
+             onOpenChange(false); // Also close on failure
         });
         rzp1.open();
     } catch (error) {
