@@ -35,7 +35,7 @@ export default function RechargeDialog({ isOpen, onOpenChange, onRecharge, razor
 
   useEffect(() => {
     const scriptId = 'razorpay-checkout-js';
-    if (document.getElementById(scriptId)) {
+    if (document.getElementById(scriptId) || window.Razorpay) {
         setIsRazorpayLoaded(true);
         return;
     }
@@ -59,7 +59,6 @@ export default function RechargeDialog({ isOpen, onOpenChange, onRecharge, razor
 
     document.body.appendChild(script);
 
-    // Cleanup function to remove the script if the component unmounts
     return () => {
         const scriptElement = document.getElementById(scriptId);
         if (scriptElement) {
@@ -99,7 +98,6 @@ export default function RechargeDialog({ isOpen, onOpenChange, onRecharge, razor
         // This function is called on successful payment
         onRecharge(rechargeAmount);
         setAmount('');
-        onOpenChange(false); // Close dialog on success
       },
       prefill: {
         contact: "9000000000",
@@ -111,6 +109,11 @@ export default function RechargeDialog({ isOpen, onOpenChange, onRecharge, razor
       },
       theme: {
         color: "#1976D2" // primary color
+      },
+      modal: {
+        ondismiss: () => {
+            onOpenChange(false);
+        }
       }
     };
     
@@ -123,7 +126,6 @@ export default function RechargeDialog({ isOpen, onOpenChange, onRecharge, razor
                 title: "Payment Failed",
                 description: response.error.description || "An unknown error occurred.",
             });
-             onOpenChange(false); // Also close on failure
         });
         rzp1.open();
     } catch (error) {
