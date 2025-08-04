@@ -98,6 +98,7 @@ export default function RechargeDialog({ isOpen, onOpenChange, onRecharge, razor
         // This function is called on successful payment
         onRecharge(rechargeAmount);
         setAmount('');
+        onOpenChange(false);
       },
       prefill: {
         contact: "9000000000",
@@ -109,11 +110,6 @@ export default function RechargeDialog({ isOpen, onOpenChange, onRecharge, razor
       },
       theme: {
         color: "#1976D2" // primary color
-      },
-      modal: {
-        ondismiss: () => {
-            onOpenChange(false);
-        }
       }
     };
     
@@ -126,6 +122,7 @@ export default function RechargeDialog({ isOpen, onOpenChange, onRecharge, razor
                 title: "Payment Failed",
                 description: response.error.description || "An unknown error occurred.",
             });
+            onOpenChange(false);
         });
         rzp1.open();
     } catch (error) {
