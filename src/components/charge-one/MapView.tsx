@@ -180,7 +180,7 @@ export default function MapView({
                     }
                 },
                 (error) => {
-                    console.error("Geolocation error:", error);
+                    console.error("Geolocation error:", error.message);
                     toast({ title: 'Could not get your location. Showing default.' });
                      if (!stationsFetchedRef.current && !route) {
                         stationsFetchedRef.current = true;
