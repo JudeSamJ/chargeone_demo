@@ -138,50 +138,35 @@ export default function MapView({
     useEffect(() => {
         if (!isLoaded) return;
 
-        const handlePositionUpdate = (position: GeolocationPosition) => {
-            const currentPos = {
-                lat: position.coords.latitude,
-                lng: position.coords.longitude,
-            };
-            onLocationUpdate(currentPos);
-
-            if (!stationsFetchedRef.current && !route) {
-                stationsFetchedRef.current = true;
-                fetchStations(currentPos.lat, currentPos.lng, 10000);
-            }
-        };
-
-        const handleError = (error: GeolocationPositionError) => {
-            console.error("Geolocation error:", error.message);
-            toast({ title: 'Could not get location. Showing default.' });
-            if (!stationsFetchedRef.current && !route) {
-                stationsFetchedRef.current = true;
-                fetchStations(defaultCenter.lat, defaultCenter.lng, 10000);
-            }
-        };
-
         if (navigator.geolocation) {
-            // First, get the current position for a quick initial load
-            navigator.geolocation.getCurrentPosition(
+            const watchId = navigator.geolocation.watchPosition(
                 (position) => {
-                    handlePositionUpdate(position);
-                    // After getting the initial position, start watching for changes
-                    const watchId = navigator.geolocation.watchPosition(
-                        handlePositionUpdate,
-                        (watchError) => {
-                            console.error("Geolocation watch error:", watchError.message);
-                            // Don't toast continuously on watch error
-                        },
-                        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-                    );
-                    return () => navigator.geolocation.clearWatch(watchId);
+                    const currentPos = {
+                        lat: position.coords.latitude,
+                        lng: position.coords.longitude,
+                    };
+                    onLocationUpdate(currentPos);
+
+                    if (!stationsFetchedRef.current && !route) {
+                        stationsFetchedRef.current = true;
+                        fetchStations(currentPos.lat, currentPos.lng, 10000);
+                    }
                 },
-                handleError,
+                (error) => {
+                    console.error("Geolocation error:", error.message);
+                    toast({ title: 'Could not get your location. Showing default.' });
+                     if (!stationsFetchedRef.current && !route) {
+                        stationsFetchedRef.current = true;
+                        fetchStations(defaultCenter.lat, defaultCenter.lng, 10000);
+                    }
+                },
                 { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
             );
+
+            return () => navigator.geolocation.clearWatch(watchId);
         } else {
             toast({ title: 'Geolocation not supported. Showing default location.' });
-            if (!stationsFetchedRef.current && !route) {
+             if (!stationsFetchedRef.current && !route) {
                 stationsFetchedRef.current = true;
                 fetchStations(defaultCenter.lat, defaultCenter.lng, 10000);
             }
