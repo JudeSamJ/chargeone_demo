@@ -75,6 +75,15 @@ export default function MapView({
         mapRef.current = map;
     }, []);
 
+    const fetchStations = useCallback((lat: number, lng: number, radius: number) => {
+        findStations({ latitude: lat, longitude: lng, radius })
+            .then(onStationsFound)
+            .catch(err => {
+                console.error("Error finding stations:", err);
+                toast({ variant: 'destructive', title: 'Could not find nearby stations.'});
+            });
+    }, [onStationsFound, toast]);
+
     const fetchStationsForView = useCallback(() => {
         if (!isLoaded || !mapRef.current || route) return;
 
@@ -90,14 +99,9 @@ export default function MapView({
         const ne = bounds.getNorthEast();
         const radius = google.maps.geometry.spherical.computeDistanceBetween(center, ne);
         
-        findStations({ latitude: centerLatLng.lat, longitude: centerLatLng.lng, radius })
-            .then(onStationsFound)
-            .catch(err => {
-                console.error("Error finding stations for view:", err);
-                toast({ variant: 'destructive', title: 'Could not find nearby stations for the current view.'});
-            });
+        fetchStations(centerLatLng.lat, centerLatLng.lng, radius);
 
-    }, [isLoaded, route, onStationsFound, toast]);
+    }, [isLoaded, route, fetchStations]);
 
     const handleMapIdle = useCallback(() => {
         if (idleTimeoutRef.current) {
@@ -132,87 +136,84 @@ export default function MapView({
     const decodedPath = route && isLoaded ? google.maps.geometry.encoding.decodePath(route.routes[0].overview_polyline.points) : [];
 
     useEffect(() => {
-        let watchId: number;
-        if (navigator.geolocation && isLoaded) {
-            watchId = navigator.geolocation.watchPosition(
-                (position) => {
-                    const currentPos = {
-                        lat: position.coords.latitude,
-                        lng: position.coords.longitude,
-                    };
-                    onLocationUpdate(currentPos);
+        if (!isLoaded) return;
 
-                    // Re-routing logic
-                    if (isJourneyStarted && route && decodedPath.length > 0) {
-                        const now = Date.now();
-                        // Throttle re-routing checks to every 10 seconds
-                        if (now - lastRerouteTimeRef.current > 10000) {
-                             const userLatLng = new google.maps.LatLng(currentPos.lat, currentPos.lng);
-                             const distanceToRoute = google.maps.geometry.spherical.computeDistanceBetween(
-                                userLatLng,
-                                // Find closest point on path
-                                new google.maps.Polyline({path: decodedPath}).getPath().getArray().reduce((prev, curr) => {
-                                    const prevDistance = google.maps.geometry.spherical.computeDistanceBetween(userLatLng, prev);
-                                    const currDistance = google.maps.geometry.spherical.computeDistanceBetween(userLatLng, curr);
-                                    return prevDistance < currDistance ? prev : curr;
-                                })
-                             );
+        const handlePositionUpdate = (position: GeolocationPosition) => {
+            const currentPos = {
+                lat: position.coords.latitude,
+                lng: position.coords.longitude,
+            };
+            onLocationUpdate(currentPos);
 
-                            if (distanceToRoute > REROUTE_THRESHOLD && route.routes[0]?.legs[0]?.end_address) {
-                                lastRerouteTimeRef.current = now;
-                                toast({ title: "Off Route", description: "Recalculating..." });
-                                const destination = route.routes[0].legs[0].end_address;
-                                if (destination) {
-                                    onReRoute(`${currentPos.lat},${currentPos.lng}`, destination);
-                                }
-                            }
-                        }
-                    }
-
-                    if (!stationsFetchedRef.current && !route) {
-                        stationsFetchedRef.current = true;
-                        findStations({ latitude: currentPos.lat, longitude: currentPos.lng, radius: 10000 })
-                            .then(onStationsFound)
-                            .catch(err => {
-                                console.error("Error finding stations:", err);
-                                toast({ variant: 'destructive', title: 'Could not find nearby stations.'});
-                            });
-                    }
-                },
-                (error) => {
-                    console.error("Geolocation error:", error.message);
-                    toast({ title: 'Could not get your location. Showing default.' });
-                     if (!stationsFetchedRef.current && !route) {
-                        stationsFetchedRef.current = true;
-                        findStations({ latitude: defaultCenter.lat, longitude: defaultCenter.lng, radius: 10000 })
-                            .then(onStationsFound)
-                            .catch(err => {
-                                console.error("Error finding stations:", err);
-                                toast({ variant: 'destructive', title: 'Could not find nearby stations.'});
-                            });
-                    }
-                },
-                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-            );
-        } else if (!navigator.geolocation) {
-             toast({ title: 'Geolocation not supported. Showing default location.' });
-             if (!stationsFetchedRef.current && !route) {
+            if (!stationsFetchedRef.current && !route) {
                 stationsFetchedRef.current = true;
-                findStations({ latitude: defaultCenter.lat, longitude: defaultCenter.lng, radius: 10000 })
-                    .then(onStationsFound)
-                    .catch(err => {
-                        console.error("Error finding stations:", err);
-                        toast({ variant: 'destructive', title: 'Could not find nearby stations.'});
-                    });
-            }
-        }
-
-        return () => {
-            if (watchId) {
-                navigator.geolocation.clearWatch(watchId);
+                fetchStations(currentPos.lat, currentPos.lng, 10000);
             }
         };
-    }, [isLoaded, onLocationUpdate, toast, route, onStationsFound, isJourneyStarted, onReRoute, decodedPath]);
+
+        const handleError = (error: GeolocationPositionError) => {
+            console.error("Geolocation error:", error.message);
+            toast({ title: 'Could not get location. Showing default.' });
+            if (!stationsFetchedRef.current && !route) {
+                stationsFetchedRef.current = true;
+                fetchStations(defaultCenter.lat, defaultCenter.lng, 10000);
+            }
+        };
+
+        if (navigator.geolocation) {
+            // First, get the current position for a quick initial load
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    handlePositionUpdate(position);
+                    // After getting the initial position, start watching for changes
+                    const watchId = navigator.geolocation.watchPosition(
+                        handlePositionUpdate,
+                        (watchError) => {
+                            console.error("Geolocation watch error:", watchError.message);
+                            // Don't toast continuously on watch error
+                        },
+                        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+                    );
+                    return () => navigator.geolocation.clearWatch(watchId);
+                },
+                handleError,
+                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+            );
+        } else {
+            toast({ title: 'Geolocation not supported. Showing default location.' });
+            if (!stationsFetchedRef.current && !route) {
+                stationsFetchedRef.current = true;
+                fetchStations(defaultCenter.lat, defaultCenter.lng, 10000);
+            }
+        }
+    }, [isLoaded, onLocationUpdate, route, fetchStations, toast]);
+
+    // Rerouting logic effect
+    useEffect(() => {
+        if (isJourneyStarted && route && currentLocation && decodedPath.length > 0) {
+            const now = Date.now();
+            if (now - lastRerouteTimeRef.current > 10000) { // Throttle rerouting checks
+                const userLatLng = new google.maps.LatLng(currentLocation.lat, currentLocation.lng);
+                const isOffRoute = google.maps.geometry.poly.isLocationOnEdge(userLatLng, new google.maps.Polyline({path: decodedPath}), 1e-3) === false;
+                
+                if (google.maps.geometry.poly.isLocationOnEdge(userLatLng, new google.maps.Polyline({ path: decodedPath }), REROUTE_THRESHOLD / 1000) === false) {
+                     const distanceToRoute = decodedPath.reduce((minDist, point) => {
+                         const dist = google.maps.geometry.spherical.computeDistanceBetween(userLatLng, point);
+                         return Math.min(minDist, dist);
+                     }, Infinity);
+
+                     if (distanceToRoute > REROUTE_THRESHOLD) {
+                        lastRerouteTimeRef.current = now;
+                        toast({ title: "Off Route", description: "Recalculating..." });
+                        const destination = route.routes[0].legs[0].end_address;
+                        if (destination) {
+                            onReRoute(`${currentLocation.lat},${currentLocation.lng}`, destination);
+                        }
+                     }
+                }
+            }
+        }
+    }, [isJourneyStarted, route, currentLocation, decodedPath, onReRoute, toast]);
 
 
     useEffect(() => {
@@ -296,7 +297,7 @@ export default function MapView({
     return (
         <GoogleMap
             mapContainerStyle={mapContainerStyle}
-            center={defaultCenter}
+            center={currentLocation || defaultCenter}
             zoom={14}
             onLoad={onMapLoad}
             onIdle={handleMapIdle}
@@ -397,5 +398,3 @@ export default function MapView({
         </GoogleMap>
     );
 }
-
-    
