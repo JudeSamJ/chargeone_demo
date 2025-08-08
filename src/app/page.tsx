@@ -17,6 +17,7 @@ import { SidebarProvider, Sidebar, SidebarInset, SidebarContent, SidebarRail } f
 import Header from '@/components/charge-one/Header';
 import { formatDuration, formatDistance } from './utils';
 import { add } from 'date-fns';
+import { createBooking, getUserBookings } from '@/lib/firestore';
 
 interface LiveJourneyData {
     distance: string;
@@ -69,6 +70,17 @@ function HomePageContent() {
       }
     }
   }, [user, loading, router, isGuest]);
+
+  useEffect(() => {
+    if (user) {
+      getUserBookings(user.uid)
+        .then(setBookedStationIds)
+        .catch(err => {
+          console.error("Failed to fetch user bookings:", err);
+          toast({ variant: 'destructive', title: 'Could not load your bookings.'});
+        });
+    }
+  }, [user, toast]);
 
   useEffect(() => {
     if (isJourneyStarted && initialTripData) {
@@ -189,10 +201,12 @@ function HomePageContent() {
   };
 
   const handleClearRoute = () => {
-    handleRouteUpdate(null);
+    setRoute(null);
+    setRequiredStations([]);
     setSelectedStation(null);
     setIsJourneyStarted(false);
     setLiveJourneyData(null);
+    setInitialTripData(null);
 
     if (currentLocation) {
         findStations({ latitude: currentLocation.lat, longitude: currentLocation.lng, radius: 10000 })
@@ -219,14 +233,34 @@ function HomePageContent() {
     }
   }
 
-  const handleBookingConfirm = (date: Date, time: string) => {
+  const handleBookingConfirm = async (date: Date, time: string) => {
+    if (!user || !selectedStation) {
+      toast({ variant: "destructive", title: "Cannot create booking", description: "You must be signed in and select a station." });
+      return;
+    }
+
     setIsBookingOpen(false);
-    // TODO: Implement actual booking logic
-    if (selectedStation) {
-      setBookedStationIds(prev => [...prev, selectedStation.id]);
+
+    // Combine date and time
+    const [hours, minutes] = time.split(':');
+    const bookingDateTime = new Date(date);
+    bookingDateTime.setHours(parseInt(hours, 10));
+    bookingDateTime.setMinutes(parseInt(minutes, 10));
+    bookingDateTime.setSeconds(0);
+
+    try {
+      await createBooking(user.uid, selectedStation, bookingDateTime);
+      setBookedStationIds(prev => [...prev, selectedStation!.id]);
       toast({
         title: "Slot Booked!",
-        description: `Your slot at ${selectedStation?.name} is confirmed for ${date.toLocaleDateString()} at ${time}.`,
+        description: `Your slot at ${selectedStation?.name} is confirmed for ${bookingDateTime.toLocaleDateString()} at ${time}.`,
+      });
+    } catch (error) {
+      console.error("Booking failed:", error);
+      toast({
+        variant: "destructive",
+        title: "Booking Failed",
+        description: "Could not book the slot. Please try again.",
       });
     }
   }
