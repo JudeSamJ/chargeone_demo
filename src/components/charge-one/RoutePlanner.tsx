@@ -21,10 +21,9 @@ export default function RoutePlanner({ onPlanRoute, isPlanning, currentLocation 
   useEffect(() => {
     // Automatically set origin when current location is first determined,
     // but only if the user hasn't already typed something in.
-    if (currentLocation && origin === '') {
+    if (currentLocation && origin.trim() === '') {
       setOrigin(`${currentLocation.lat}, ${currentLocation.lng}`);
     }
-    // We only want this to run when the location is first found, or if origin is cleared.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentLocation]);
 
