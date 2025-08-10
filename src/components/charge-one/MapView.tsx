@@ -160,13 +160,13 @@ export default function MapView({
               });
             },
             handleLocationError,
-            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+            { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 }
           );
     
           return () => navigator.geolocation.clearWatch(watchId);
         },
         handleLocationError,
-        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+        { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 }
       );
     }, [isLoaded, onLocationUpdate, route, fetchStations, toast, locationReady]);
 
