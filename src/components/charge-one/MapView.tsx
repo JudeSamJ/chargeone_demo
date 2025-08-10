@@ -2,14 +2,13 @@
 "use client";
 
 import { GoogleMap, useJsApiLoader, MarkerF, InfoWindowF, Polyline, TrafficLayer } from '@react-google-maps/api';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, useMemo } from 'react';
 import { findStations } from '@/ai/flows/findStations';
 import type { Station } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { useTheme } from 'next-themes';
 import { mapStylesLight } from '@/lib/map-styles-light';
 import { mapStylesDark } from '@/lib/map-styles-dark';
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Badge } from '../ui/badge';
 import { Zap, Plug, CircleDotDashed, CalendarCheck } from 'lucide-react';
 
@@ -135,12 +134,16 @@ export default function MapView({
         }
     }, [route]);
 
-    const decodedPath = route && isLoaded ? google.maps.geometry.encoding.decodePath(route.routes[0].overview_polyline.points) : [];
+    const decodedPath = useMemo(() => {
+      if (route && isLoaded) {
+          return google.maps.geometry.encoding.decodePath(route.routes[0].overview_polyline.points);
+      }
+      return [];
+    }, [route, isLoaded]);
 
     useEffect(() => {
         if (!isLoaded) return;
 
-        // Use watchPosition for continuous location updates
         const watchId = navigator.geolocation.watchPosition(
           (position) => {
             const currentPos = {
@@ -163,7 +166,7 @@ export default function MapView({
             toast({ title: "Could not get your location. Showing default." });
             
             if (!locationReady) {
-              setLocationReady(true); // Allow map to load with default location
+              setLocationReady(true);
             }
 
             if (!stationsFetchedRef.current && !route) {
@@ -187,7 +190,6 @@ export default function MapView({
             const now = Date.now();
             if (now - lastRerouteTimeRef.current > 10000) { // Throttle rerouting checks
                 const userLatLng = new google.maps.LatLng(currentLocation.lat, currentLocation.lng);
-                const isOffRoute = google.maps.geometry.poly.isLocationOnEdge(userLatLng, new google.maps.Polyline({path: decodedPath}), 1e-3) === false;
                 
                 if (google.maps.geometry.poly.isLocationOnEdge(userLatLng, new google.maps.Polyline({ path: decodedPath }), REROUTE_THRESHOLD / 1000) === false) {
                      const distanceToRoute = decodedPath.reduce((minDist, point) => {
