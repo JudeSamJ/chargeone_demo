@@ -42,6 +42,7 @@ interface MapViewProps {
   mapTypeId: string;
   showTraffic: boolean;
   bookedStationIds: string[];
+  requiredStationIds: string[];
 }
 
 export default function MapView({ 
@@ -55,7 +56,8 @@ export default function MapView({
     onReRoute,
     mapTypeId,
     showTraffic,
-    bookedStationIds
+    bookedStationIds,
+    requiredStationIds
 }: MapViewProps) {
     const { isLoaded, loadError } = useJsApiLoader({
         googleMapsApiKey: "AIzaSyBMltP754BsiINUjJ90C0HE5YE0As2cTcc",
@@ -138,55 +140,46 @@ export default function MapView({
     useEffect(() => {
         if (!isLoaded) return;
 
-        if (navigator.geolocation) {
-          const handleSuccess = (position: GeolocationPosition) => {
-              const currentPos = {
-                  lat: position.coords.latitude,
-                  lng: position.coords.longitude,
-              };
-              onLocationUpdate(currentPos);
+        // Use watchPosition for continuous location updates
+        const watchId = navigator.geolocation.watchPosition(
+          (position) => {
+            const currentPos = {
+              lat: position.coords.latitude,
+              lng: position.coords.longitude,
+            };
+            onLocationUpdate(currentPos);
+            
+            if (!locationReady) {
               setLocationReady(true);
-
-              if (!stationsFetchedRef.current && !route) {
-                  stationsFetchedRef.current = true;
-                  fetchStations(currentPos.lat, currentPos.lng, 10000);
-              }
-          };
-
-          const handleError = (error: GeolocationPositionError) => {
-              console.error("Geolocation error:", error.message);
-              toast({ title: 'Could not get your location. Showing default.' });
-              setLocationReady(true); // Allow map to load with default location
-               if (!stationsFetchedRef.current && !route) {
-                  stationsFetchedRef.current = true;
-                  fetchStations(defaultCenter.lat, defaultCenter.lng, 10000);
-              }
-          };
-
-          // Get initial position quickly
-          navigator.geolocation.getCurrentPosition(handleSuccess, handleError, {
-            enableHighAccuracy: true,
-            timeout: 10000,
-            maximumAge: 0,
-          });
-
-          // Then watch for changes
-          const watchId = navigator.geolocation.watchPosition(handleSuccess, handleError, {
-            enableHighAccuracy: true,
-            timeout: 10000,
-            maximumAge: 0,
-          });
-
-          return () => navigator.geolocation.clearWatch(watchId);
-        } else {
-            toast({ title: 'Geolocation not supported. Showing default location.' });
-            setLocationReady(true);
-             if (!stationsFetchedRef.current && !route) {
-                stationsFetchedRef.current = true;
-                fetchStations(defaultCenter.lat, defaultCenter.lng, 10000);
             }
-        }
-    }, [isLoaded, onLocationUpdate, route, fetchStations, toast]);
+
+            if (!stationsFetchedRef.current && !route) {
+              stationsFetchedRef.current = true;
+              fetchStations(currentPos.lat, currentPos.lng, 10000);
+            }
+          },
+          (error) => {
+            console.error("Geolocation error:", error.message);
+            toast({ title: "Could not get your location. Showing default." });
+            
+            if (!locationReady) {
+              setLocationReady(true); // Allow map to load with default location
+            }
+
+            if (!stationsFetchedRef.current && !route) {
+              stationsFetchedRef.current = true;
+              fetchStations(defaultCenter.lat, defaultCenter.lng, 10000);
+            }
+          },
+          {
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 0,
+          }
+        );
+
+        return () => navigator.geolocation.clearWatch(watchId);
+    }, [isLoaded, onLocationUpdate, route, fetchStations, toast, locationReady]);
 
     // Rerouting logic effect
     useEffect(() => {
@@ -236,10 +229,21 @@ export default function MapView({
     const getStationMarkerIcon = (station: Station) => {
         if (!isLoaded) return null;
 
+        if (requiredStationIds.includes(station.id)) {
+            return {
+                path: google.maps.SymbolPath.CIRCLE,
+                fillColor: '#3b82f6', // A bright blue for required stations
+                fillOpacity: 1,
+                strokeColor: '#ffffff',
+                strokeWeight: 2,
+                scale: 9, // Make it slightly larger to stand out
+            };
+        }
+
         if (bookedStationIds.includes(station.id)) {
             return {
                 path: 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.5 14H11v-6h2v4h1.5v2z', // Clock icon path
-                fillColor: '#3B82F6', // Blue-500
+                fillColor: '#10B981', // Green-500
                 fillOpacity: 1,
                 strokeColor: '#ffffff',
                 strokeWeight: 1.5,
@@ -355,6 +359,7 @@ export default function MapView({
                         onMouseOver={() => setActiveMarker(station.id)}
                         onMouseOut={() => setActiveMarker(null)}
                         icon={getStationMarkerIcon(station)}
+                        zIndex={requiredStationIds.includes(station.id) ? 2 : 1}
                     />
                 ))}
 

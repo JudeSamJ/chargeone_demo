@@ -207,7 +207,7 @@ function HomePageContent() {
     setIsJourneyStarted(false);
     setLiveJourneyData(null);
     setInitialTripData(null);
-
+    // When clearing the route, fetch stations around the current location.
     if (currentLocation) {
         findStations({ latitude: currentLocation.lat, longitude: currentLocation.lng, radius: 10000 })
             .then(setStations)
@@ -217,6 +217,7 @@ function HomePageContent() {
                 setStations([]);
             });
     } else {
+        // If no location, clear stations list
         setStations([]);
     }
   };
@@ -332,6 +333,7 @@ function HomePageContent() {
                 mapTypeId={mapTypeId}
                 showTraffic={showTraffic}
                 bookedStationIds={bookedStationIds}
+                requiredStationIds={requiredStations.map(s => s.id)}
             />
         </SidebarInset>
         <Toaster />
