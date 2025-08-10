@@ -24,6 +24,7 @@ export default function ChargingSession({ station, vehicle, onEndSession, onClea
   const [sessionFinished, setSessionFinished] = useState(false);
   const [elapsedTime, setElapsedTime] = useState(0);
   const [energyAdded, setEnergyAdded] = useState(0);
+  const [finalCost, setFinalCost] = useState(0);
   const { toast } = useToast();
 
   const cost = station ? energyAdded * station.pricePerKwh : 0;
@@ -35,6 +36,7 @@ export default function ChargingSession({ station, vehicle, onEndSession, onClea
     setSessionFinished(false);
     setElapsedTime(0);
     setEnergyAdded(0);
+    setFinalCost(0);
   }, [station]);
 
   useEffect(() => {
@@ -58,6 +60,7 @@ export default function ChargingSession({ station, vehicle, onEndSession, onClea
   const handleStop = () => {
     setIsCharging(false);
     setSessionFinished(true);
+    setFinalCost(cost);
     toast({
         title: "Charging Stopped",
         description: `Your wallet has been charged ₹${cost.toFixed(2)}.`,
@@ -67,12 +70,12 @@ export default function ChargingSession({ station, vehicle, onEndSession, onClea
   const handleRequestRefund = () => {
     toast({
         title: "Refund Requested",
-        description: `Your request for a refund of ₹${cost.toFixed(2)} has been submitted for review.`,
+        description: `Your request for a refund of ₹${finalCost.toFixed(2)} has been submitted for review.`,
     });
   };
   
   const handleClose = () => {
-    onEndSession(cost);
+    onEndSession(finalCost);
   };
   
   const formatTime = (seconds: number) => {
@@ -113,7 +116,7 @@ export default function ChargingSession({ station, vehicle, onEndSession, onClea
             <CardContent className="space-y-3">
                 <div className="flex justify-between items-center p-3 bg-muted rounded-lg">
                     <span className="font-medium">Total Cost</span>
-                    <span className="text-xl font-bold text-primary">₹{cost.toFixed(2)}</span>
+                    <span className="text-xl font-bold text-primary">₹{finalCost.toFixed(2)}</span>
                 </div>
                 <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
                     <div className="space-y-1"><p className="text-muted-foreground">Station</p><p className="font-medium truncate">{station.name}</p></div>
