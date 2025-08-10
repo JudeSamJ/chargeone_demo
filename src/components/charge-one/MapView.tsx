@@ -12,7 +12,6 @@ import { mapStylesDark } from '@/lib/map-styles-dark';
 import { Badge } from '../ui/badge';
 import { Zap, Plug, CircleDotDashed, CalendarCheck } from 'lucide-react';
 
-
 const mapContainerStyle = {
   position: 'absolute' as const,
   width: '100%',
@@ -44,6 +43,13 @@ interface MapViewProps {
   requiredStationIds: string[];
 }
 
+interface ActiveMarkerInfo {
+    id: string;
+    position: google.maps.LatLngLiteral;
+    title?: string;
+    isStation: boolean;
+}
+
 export default function MapView({ 
     onStationsFound, 
     stations, 
@@ -63,7 +69,7 @@ export default function MapView({
         libraries: ['places', 'geometry'], 
     });
     
-    const [activeMarker, setActiveMarker] = useState<string | null>(null);
+    const [activeMarker, setActiveMarker] = useState<ActiveMarkerInfo | null>(null);
     const { toast } = useToast();
     const mapRef = useRef<google.maps.Map | null>(null);
     const { theme } = useTheme();
@@ -96,7 +102,6 @@ export default function MapView({
 
         const centerLatLng = { lat: center.lat(), lng: center.lng() };
         
-        // Calculate radius from bounds
         const ne = bounds.getNorthEast();
         const radius = google.maps.geometry.spherical.computeDistanceBetween(center, ne);
         
@@ -112,6 +117,58 @@ export default function MapView({
             fetchStationsForView();
         }, 500); // Debounce to avoid rapid firing
     }, [fetchStationsForView]);
+
+    useEffect(() => {
+      if (!isLoaded) return;
+    
+      const setInitialPosition = (position: GeolocationPosition) => {
+        const currentPos = {
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+        };
+        onLocationUpdate(currentPos);
+        if (!locationReady) {
+          setLocationReady(true);
+        }
+        if (!stationsFetchedRef.current && !route) {
+          stationsFetchedRef.current = true;
+          fetchStations(currentPos.lat, currentPos.lng, 10000);
+        }
+      };
+    
+      const handleLocationError = (error: GeolocationPositionError) => {
+        console.error("Geolocation error:", error.message);
+        toast({ title: "Could not get your location. Showing default." });
+        if (!locationReady) {
+          setLocationReady(true); // Allow map to load with default location
+        }
+        if (!stationsFetchedRef.current && !route) {
+          stationsFetchedRef.current = true;
+          fetchStations(defaultCenter.lat, defaultCenter.lng, 10000);
+        }
+      };
+    
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setInitialPosition(position);
+          // Once we have an initial position, start watching for changes
+          const watchId = navigator.geolocation.watchPosition(
+            (pos) => {
+              onLocationUpdate({
+                lat: pos.coords.latitude,
+                lng: pos.coords.longitude,
+              });
+            },
+            handleLocationError,
+            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+          );
+    
+          return () => navigator.geolocation.clearWatch(watchId);
+        },
+        handleLocationError,
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+      );
+    }, [isLoaded, onLocationUpdate, route, fetchStations, toast, locationReady]);
 
     useEffect(() => {
       if (locationReady && mapRef.current && currentLocation) {
@@ -135,54 +192,11 @@ export default function MapView({
     }, [route]);
 
     const decodedPath = useMemo(() => {
-      if (route && isLoaded) {
+      if (route && isLoaded && route.routes[0]?.overview_polyline?.points) {
           return google.maps.geometry.encoding.decodePath(route.routes[0].overview_polyline.points);
       }
       return [];
     }, [route, isLoaded]);
-
-    useEffect(() => {
-        if (!isLoaded) return;
-
-        const watchId = navigator.geolocation.watchPosition(
-          (position) => {
-            const currentPos = {
-              lat: position.coords.latitude,
-              lng: position.coords.longitude,
-            };
-            onLocationUpdate(currentPos);
-            
-            if (!locationReady) {
-              setLocationReady(true);
-            }
-
-            if (!stationsFetchedRef.current && !route) {
-              stationsFetchedRef.current = true;
-              fetchStations(currentPos.lat, currentPos.lng, 10000);
-            }
-          },
-          (error) => {
-            console.error("Geolocation error:", error.message);
-            toast({ title: "Could not get your location. Showing default." });
-            
-            if (!locationReady) {
-              setLocationReady(true);
-            }
-
-            if (!stationsFetchedRef.current && !route) {
-              stationsFetchedRef.current = true;
-              fetchStations(defaultCenter.lat, defaultCenter.lng, 10000);
-            }
-          },
-          {
-            enableHighAccuracy: true,
-            timeout: 10000,
-            maximumAge: 0,
-          }
-        );
-
-        return () => navigator.geolocation.clearWatch(watchId);
-    }, [isLoaded, onLocationUpdate, route, fetchStations, toast, locationReady]);
 
     // Rerouting logic effect
     useEffect(() => {
@@ -319,7 +333,7 @@ export default function MapView({
     if (loadError) return <div className="flex items-center justify-center h-full w-full bg-muted rounded-lg"><p>Error loading map</p></div>;
     if (!isLoaded || !locationReady) return <div className="flex items-center justify-center h-full w-full bg-muted rounded-lg"><p>Loading Map...</p></div>;
 
-    const activeStation = stations.find(s => s.id === activeMarker);
+    const activeStation = activeMarker?.isStation ? stations.find(s => s.id === activeMarker.id) : null;
 
     return (
         <GoogleMap
@@ -328,6 +342,7 @@ export default function MapView({
             zoom={14}
             onLoad={onMapLoad}
             onIdle={handleMapIdle}
+            onClick={() => setActiveMarker(null)}
             mapTypeId={mapTypeId}
             options={{
                 disableDefaultUI: true,
@@ -341,6 +356,7 @@ export default function MapView({
                   <MarkerF
                       position={currentLocation}
                       title="Your Location"
+                      onMouseOver={() => setActiveMarker({ id: 'currentLocation', position: currentLocation, title: 'Your Location', isStation: false })}
                       icon={{
                           path: google.maps.SymbolPath.CIRCLE,
                           fillColor: '#4285F4',
@@ -358,45 +374,49 @@ export default function MapView({
                         position={{ lat: station.lat, lng: station.lng }}
                         title={`${station.name} (${station.power}kW)`}
                         onClick={() => onStationClick(station)}
-                        onMouseOver={() => setActiveMarker(station.id)}
+                        onMouseOver={() => setActiveMarker({ id: station.id, position: { lat: station.lat, lng: station.lng }, isStation: true })}
                         icon={getStationMarkerIcon(station)}
                         zIndex={requiredStationIds.includes(station.id) ? 2 : 1}
                     />
                 ))}
 
-                {activeStation && (
+                {activeMarker && (
                     <InfoWindowF
-                        position={{ lat: activeStation.lat, lng: activeStation.lng }}
+                        position={activeMarker.position}
                         onCloseClick={() => setActiveMarker(null)}
                         options={{ pixelOffset: new google.maps.Size(0, -30) }}
                     >
-                        <div className="p-1 max-w-xs">
-                           <h4 className="font-bold text-base mb-1">{activeStation.name}</h4>
-                           <div className="flex flex-col gap-2 text-sm">
-                                <div className="flex items-center gap-2">
-                                    <CircleDotDashed className="h-4 w-4 text-muted-foreground" /> 
-                                    <Badge variant={activeStation.status === 'available' ? 'default' : 'destructive'} className="capitalize">
-                                        {activeStation.status.replace('-', ' ')}
-                                    </Badge>
-                                </div>
-                               <div className="flex items-center gap-2">
-                                   <Zap className="h-4 w-4 text-muted-foreground" />
-                                   <span>{activeStation.power} kW</span>
-                               </div>
-                               <div className="flex items-center gap-2">
-                                   <Plug className="h-4 w-4 text-muted-foreground" />
-                                   <div className="flex gap-1">
-                                    {activeStation.connectors.map(c => <Badge key={c} variant="secondary">{c}</Badge>)}
+                       {activeStation ? (
+                            <div className="p-1 max-w-xs">
+                               <h4 className="font-bold text-base mb-1">{activeStation.name}</h4>
+                               <div className="flex flex-col gap-2 text-sm">
+                                    <div className="flex items-center gap-2">
+                                        <CircleDotDashed className="h-4 w-4 text-muted-foreground" /> 
+                                        <Badge variant={activeStation.status === 'available' ? 'default' : 'destructive'} className="capitalize">
+                                            {activeStation.status.replace('-', ' ')}
+                                        </Badge>
+                                    </div>
+                                   <div className="flex items-center gap-2">
+                                       <Zap className="h-4 w-4 text-muted-foreground" />
+                                       <span>{activeStation.power} kW</span>
                                    </div>
+                                   <div className="flex items-center gap-2">
+                                       <Plug className="h-4 w-4 text-muted-foreground" />
+                                       <div className="flex gap-1">
+                                        {activeStation.connectors.map(c => <Badge key={c} variant="secondary">{c}</Badge>)}
+                                       </div>
+                                   </div>
+                                   {activeStation.hasSlotBooking && (
+                                    <div className="flex items-center gap-2">
+                                        <CalendarCheck className="h-4 w-4 text-muted-foreground" />
+                                        <span>Slot booking available</span>
+                                    </div>
+                                   )}
                                </div>
-                               {activeStation.hasSlotBooking && (
-                                <div className="flex items-center gap-2">
-                                    <CalendarCheck className="h-4 w-4 text-muted-foreground" />
-                                    <span>Slot booking available</span>
-                                </div>
-                               )}
-                           </div>
-                        </div>
+                            </div>
+                        ) : (
+                           <div className="p-1 font-bold">{activeMarker.title}</div>
+                        )}
                     </InfoWindowF>
                 )}
                 
@@ -415,6 +435,7 @@ export default function MapView({
                     <MarkerF
                         position={originMarker.position}
                         title="Origin"
+                        onMouseOver={() => setActiveMarker({ id: 'origin', position: originMarker.position, title: 'Origin', isStation: false })}
                         icon={originMarker.icon}
                     />
                 )}
@@ -423,6 +444,7 @@ export default function MapView({
                     <MarkerF
                         position={destinationMarker.position}
                         title="Destination"
+                        onMouseOver={() => setActiveMarker({ id: 'destination', position: destinationMarker.position, title: 'Destination', isStation: false })}
                         icon={destinationMarker.icon}
                     />
                 )}
@@ -433,7 +455,5 @@ export default function MapView({
         </GoogleMap>
     );
 }
-
-    
 
     
