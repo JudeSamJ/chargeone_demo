@@ -359,7 +359,6 @@ export default function MapView({
                         title={`${station.name} (${station.power}kW)`}
                         onClick={() => onStationClick(station)}
                         onMouseOver={() => setActiveMarker(station.id)}
-                        onMouseOut={() => setActiveMarker(null)}
                         icon={getStationMarkerIcon(station)}
                         zIndex={requiredStationIds.includes(station.id) ? 2 : 1}
                     />
@@ -434,5 +433,7 @@ export default function MapView({
         </GoogleMap>
     );
 }
+
+    
 
     
