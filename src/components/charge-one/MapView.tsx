@@ -77,6 +77,7 @@ export default function MapView({
     const lastRerouteTimeRef = useRef<number>(0);
     const idleTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const [locationReady, setLocationReady] = useState(false);
+    const initialLocationSetRef = useRef(false);
 
     const onMapLoad = useCallback((map: google.maps.Map) => {
         mapRef.current = map;
@@ -118,65 +119,56 @@ export default function MapView({
         }, 500); // Debounce to avoid rapid firing
     }, [fetchStationsForView]);
 
-    useEffect(() => {
-      if (!isLoaded) return;
-    
-      const setInitialPosition = (position: GeolocationPosition) => {
-        const currentPos = {
-          lat: position.coords.latitude,
-          lng: position.coords.longitude,
+     useEffect(() => {
+        if (!isLoaded) return;
+
+        const handleLocationError = (error: GeolocationPositionError) => {
+            console.error("Geolocation error:", error.message);
+            if (!locationReady) {
+                toast({ title: "Could not get your location. Showing default." });
+                setLocationReady(true);
+                if (!stationsFetchedRef.current && !route) {
+                    stationsFetchedRef.current = true;
+                    fetchStations(defaultCenter.lat, defaultCenter.lng, 10000);
+                }
+            }
         };
-        onLocationUpdate(currentPos);
-        if (!locationReady) {
-          setLocationReady(true);
-        }
-        if (!stationsFetchedRef.current && !route) {
-          stationsFetchedRef.current = true;
-          fetchStations(currentPos.lat, currentPos.lng, 10000);
-        }
-      };
-    
-      const handleLocationError = (error: GeolocationPositionError) => {
-        console.error("Geolocation error:", error.message);
-        toast({ title: "Could not get your location. Showing default." });
-        if (!locationReady) {
-          setLocationReady(true); // Allow map to load with default location
-        }
-        if (!stationsFetchedRef.current && !route) {
-          stationsFetchedRef.current = true;
-          fetchStations(defaultCenter.lat, defaultCenter.lng, 10000);
-        }
-      };
-    
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          setInitialPosition(position);
-          // Once we have an initial position, start watching for changes
-          const watchId = navigator.geolocation.watchPosition(
-            (pos) => {
-              onLocationUpdate({
-                lat: pos.coords.latitude,
-                lng: pos.coords.longitude,
-              });
-            },
-            handleLocationError,
-            { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 }
-          );
-    
-          return () => navigator.geolocation.clearWatch(watchId);
-        },
-        handleLocationError,
-        { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 }
-      );
+
+        const updatePosition = () => {
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    const currentPos = {
+                        lat: position.coords.latitude,
+                        lng: position.coords.longitude,
+                    };
+                    onLocationUpdate(currentPos);
+                    
+                    if (!locationReady) {
+                        setLocationReady(true);
+                    }
+
+                    if (!initialLocationSetRef.current) {
+                        if (mapRef.current) {
+                            mapRef.current.panTo(currentPos);
+                            mapRef.current.setZoom(14);
+                        }
+                        if (!stationsFetchedRef.current && !route) {
+                            stationsFetchedRef.current = true;
+                            fetchStations(currentPos.lat, currentPos.lng, 10000);
+                        }
+                        initialLocationSetRef.current = true;
+                    }
+                },
+                handleLocationError,
+                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+            );
+        };
+        
+        updatePosition(); // Get initial position
+        const intervalId = setInterval(updatePosition, 5000); // Update every 5 seconds
+
+        return () => clearInterval(intervalId);
     }, [isLoaded, onLocationUpdate, route, fetchStations, toast, locationReady]);
-
-    useEffect(() => {
-      if (locationReady && mapRef.current && currentLocation) {
-          mapRef.current.panTo(currentLocation);
-          mapRef.current.setZoom(14);
-      }
-    }, [locationReady, currentLocation]);
-
 
     useEffect(() => {
         if (isJourneyStarted && mapRef.current && currentLocation) {
@@ -294,7 +286,7 @@ export default function MapView({
         return {
             position: routeLeg.start_location,
             icon: {
-                path: 'M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5-2.5z', // Pin icon
+                path: 'M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5-2.5-1.12 2.5-2.5-2.5z', // Pin icon
                 fillColor: '#4CAF50', // A shade of green for start
                 fillOpacity: 1,
                 strokeColor: '#ffffff',
@@ -314,7 +306,7 @@ export default function MapView({
       return {
           position: routeLeg.end_location,
           icon: {
-            path: 'M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5-2.5z',
+            path: 'M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5-2.5-1.12 2.5-2.5-2.5z',
             fillColor: '#EA4335',
             fillOpacity: 1,
             strokeColor: '#ffffff',
@@ -455,5 +447,3 @@ export default function MapView({
         </GoogleMap>
     );
 }
-
-    
