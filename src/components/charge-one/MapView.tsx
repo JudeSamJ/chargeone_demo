@@ -81,7 +81,14 @@ export default function MapView({
 
     const onMapLoad = useCallback((map: google.maps.Map) => {
         mapRef.current = map;
-    }, []);
+        if (currentLocation && !initialLocationSetRef.current) {
+            map.panTo(currentLocation);
+            map.setZoom(14);
+            fetchStations(currentLocation.lat, currentLocation.lng, 10000);
+            initialLocationSetRef.current = true;
+            stationsFetchedRef.current = true;
+        }
+    }, [currentLocation]);
 
     const fetchStations = useCallback((lat: number, lng: number, radius: number) => {
         findStations({ latitude: lat, longitude: lng, radius })
@@ -323,7 +330,7 @@ export default function MapView({
 
 
     if (loadError) return <div className="flex items-center justify-center h-full w-full bg-muted rounded-lg"><p>Error loading map</p></div>;
-    if (!isLoaded || !locationReady) return <div className="flex items-center justify-center h-full w-full bg-muted rounded-lg"><p>Loading Map...</p></div>;
+    if (!isLoaded || !locationReady) return <div className="flex items-center justify-center h-full w-full bg-muted rounded-lg"><p>Getting your location...</p></div>;
 
     const activeStation = activeMarker?.isStation ? stations.find(s => s.id === activeMarker.id) : null;
 
