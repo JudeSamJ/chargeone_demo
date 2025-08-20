@@ -119,9 +119,9 @@ export default function MapView({
         }, 500); // Debounce to avoid rapid firing
     }, [fetchStationsForView]);
 
-     useEffect(() => {
+    useEffect(() => {
         if (!isLoaded) return;
-
+    
         const handleLocationError = (error: GeolocationPositionError) => {
             console.error("Geolocation error:", error.message);
             if (!locationReady) {
@@ -133,7 +133,7 @@ export default function MapView({
                 }
             }
         };
-
+    
         const updatePosition = () => {
             navigator.geolocation.getCurrentPosition(
                 (position) => {
@@ -146,7 +146,7 @@ export default function MapView({
                     if (!locationReady) {
                         setLocationReady(true);
                     }
-
+    
                     if (!initialLocationSetRef.current) {
                         if (mapRef.current) {
                             mapRef.current.panTo(currentPos);
@@ -160,13 +160,13 @@ export default function MapView({
                     }
                 },
                 handleLocationError,
-                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+                { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 }
             );
         };
         
         updatePosition(); // Get initial position
         const intervalId = setInterval(updatePosition, 5000); // Update every 5 seconds
-
+    
         return () => clearInterval(intervalId);
     }, [isLoaded, onLocationUpdate, route, fetchStations, toast, locationReady]);
 
@@ -340,6 +340,7 @@ export default function MapView({
                 disableDefaultUI: true,
                 zoomControl: true,
                 styles: mapTypeId === 'roadmap' ? mapThemeStyles : undefined,
+                minZoom: 3,
             }}
         >
             {isLoaded && (
