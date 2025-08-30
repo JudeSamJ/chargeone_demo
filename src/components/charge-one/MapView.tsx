@@ -73,20 +73,13 @@ export default function MapView({
     const { theme } = useTheme();
     const stationsFetchedRef = useRef(false);
     const lastRerouteTimeRef = useRef<number>(0);
-    const idleTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const [locationReady, setLocationReady] = useState(false);
     const initialLocationSetRef = useRef(false);
 
     const onMapLoad = useCallback((map: google.maps.Map) => {
         mapRef.current = map;
-        if (currentLocation && !initialLocationSetRef.current) {
-            map.panTo(currentLocation);
-            map.setZoom(14);
-            fetchStations(currentLocation.lat, currentLocation.lng, 10000);
-            initialLocationSetRef.current = true;
-            stationsFetchedRef.current = true;
-        }
-    }, [currentLocation]);
+        // The centering logic is now handled in the useEffect for location updates
+    }, []);
 
     const fetchStations = useCallback((lat: number, lng: number, radius: number) => {
         findStations({ latitude: lat, longitude: lng, radius })
@@ -97,33 +90,6 @@ export default function MapView({
             });
     }, [onStationsFound, toast]);
 
-    const fetchStationsForView = useCallback(() => {
-        if (!isLoaded || !mapRef.current || route) return;
-
-        const map = mapRef.current;
-        const center = map.getCenter();
-        const bounds = map.getBounds();
-
-        if (!center || !bounds) return;
-
-        const centerLatLng = { lat: center.lat(), lng: center.lng() };
-        
-        const ne = bounds.getNorthEast();
-        const radius = google.maps.geometry.spherical.computeDistanceBetween(center, ne);
-        
-        fetchStations(centerLatLng.lat, centerLatLng.lng, radius);
-
-    }, [isLoaded, route, fetchStations]);
-
-    const handleMapIdle = useCallback(() => {
-        if (idleTimeoutRef.current) {
-            clearTimeout(idleTimeoutRef.current);
-        }
-        idleTimeoutRef.current = setTimeout(() => {
-            fetchStationsForView();
-        }, 500); // Debounce to avoid rapid firing
-    }, [fetchStationsForView]);
-
     useEffect(() => {
         if (!isLoaded) return;
     
@@ -131,6 +97,7 @@ export default function MapView({
             console.error("Geolocation error:", error.message);
             if (!locationReady) {
                 toast({ title: "Could not get your location. Showing default." });
+                onLocationUpdate(defaultCenter); // Set default location on error
                 setLocationReady(true);
                 if (!stationsFetchedRef.current && !route) {
                     stationsFetchedRef.current = true;
@@ -152,11 +119,9 @@ export default function MapView({
                         setLocationReady(true);
                     }
     
-                    if (!initialLocationSetRef.current) {
-                        if (mapRef.current) {
-                            mapRef.current.panTo(currentPos);
-                            mapRef.current.setZoom(14);
-                        }
+                    if (mapRef.current && !initialLocationSetRef.current) {
+                        mapRef.current.panTo(currentPos);
+                        mapRef.current.setZoom(14);
                         if (!stationsFetchedRef.current && !route) {
                             stationsFetchedRef.current = true;
                             fetchStations(currentPos.lat, currentPos.lng, 10000);
@@ -185,6 +150,8 @@ export default function MapView({
      useEffect(() => {
         if (!route) {
             stationsFetchedRef.current = false;
+        } else {
+            stationsFetchedRef.current = true; // A route is active, don't fetch stations on move
         }
     }, [route]);
 
@@ -339,7 +306,6 @@ export default function MapView({
             center={currentLocation || defaultCenter}
             zoom={14}
             onLoad={onMapLoad}
-            onIdle={handleMapIdle}
             onClick={() => setActiveMarker(null)}
             mapTypeId={mapTypeId}
             options={{
