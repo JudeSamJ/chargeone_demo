@@ -1,0 +1,341 @@
+
+"use client";
+
+import { useState, Suspense, useEffect, useCallback, useRef } from 'react';
+import { defaultVehicle } from '@/lib/mock-data';
+import MapView from '@/components/charge-one/MapView';
+import { Toaster } from '@/components/ui/toaster';
+import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Skeleton } from '@/components/ui/skeleton';
+import { planRoute } from '@/ai/flows/planRoute';
+import { findStations } from '@/ai/flows/findStations';
+import Controls from '@/components/charge-one/Controls';
+import { SidebarProvider, Sidebar, SidebarInset, SidebarContent, SidebarRail } from '@/components/ui/sidebar';
+import Header from '@/components/charge-one/Header';
+import { formatDuration, formatDistance } from './utils';
+import { add } from 'date-fns';
+import { createBooking, getUserBookings } from '@/lib/firestore';
+
+function HomePageContent() {
+  const [stations, setStations] = useState([]);
+  const [requiredStations, setRequiredStations] = useState([]);
+  const [selectedStation, setSelectedStation] = useState(null);
+  const [walletBalance, setWalletBalance] = useState(0);
+  const [isRechargeOpen, setIsRechargeOpen] = useState(false);
+  const [isBookingOpen, setIsBookingOpen] = useState(false);
+  const [bookedStationIds, setBookedStationIds] = useState([]);
+  const [userVehicle, setUserVehicle] = useState(null);
+  const [route, setRoute] = useState(null);
+  const [isPlanningRoute, setIsPlanningRoute] = useState(false);
+  const [currentLocation, setCurrentLocation] = useState(null);
+  const [isJourneyStarted, setIsJourneyStarted] = useState(false);
+  const [liveJourneyData, setLiveJourneyData] = useState(null);
+  const journeyIntervalRef = useRef(null);
+  const [initialTripData, setInitialTripData] = useState(null);
+  const [mapTypeId, setMapTypeId] = useState('roadmap');
+  const [showTraffic, setShowTraffic] = useState(false);
+  const [recenterMap, setRecenterMap] = useState(() => () => {});
+  
+
+  const { toast } = useToast();
+  const { user, loading } = useAuth();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const isGuest = searchParams.get('guest') === 'true';
+
+  useEffect(() => {
+    if (!loading && !user && !isGuest) {
+      router.push('/login');
+    } else if (!loading && (user || isGuest)) {
+      const storedVehicle = localStorage.getItem('userVehicle');
+      if (storedVehicle) {
+        setUserVehicle(JSON.parse(storedVehicle));
+      } else if(isGuest) {
+        const guestVehicle = { ...defaultVehicle, currentCharge: 80 };
+        setUserVehicle(guestVehicle);
+        localStorage.setItem('userVehicle', JSON.stringify(guestVehicle));
+      }
+      else if (user) {
+        router.push('/vehicle-details');
+      }
+    }
+  }, [user, loading, router, isGuest]);
+
+  useEffect(() => {
+    if (user) {
+      getUserBookings(user.uid)
+        .then(setBookedStationIds)
+        .catch(err => {
+          console.error("Failed to fetch user bookings:", err);
+          toast({ variant: 'destructive', title: 'Could not load your bookings.'});
+        });
+    }
+  }, [user, toast]);
+
+  useEffect(() => {
+    if (isJourneyStarted && initialTripData) {
+        const startTime = Date.now();
+        
+        const updateJourneyData = () => {
+            const elapsedTimeSeconds = (Date.now() - startTime) / 1000;
+            const remainingDurationSeconds = Math.max(0, initialTripData.duration - elapsedTimeSeconds);
+            const arrivalTime = new Date(Date.now() + remainingDurationSeconds * 1000);
+            
+            setLiveJourneyData(prev => prev ? ({
+                ...prev,
+                duration: formatDuration(remainingDurationSeconds),
+                estimatedArrivalTime: arrivalTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            }) : prev);
+        };
+        
+        updateJourneyData(); // Initial update
+        journeyIntervalRef.current = setInterval(updateJourneyData, 30000); // Update every 30 seconds
+
+    } else if (journeyIntervalRef.current) {
+        clearInterval(journeyIntervalRef.current);
+        journeyIntervalRef.current = null;
+    }
+
+    return () => {
+        if (journeyIntervalRef.current) {
+            clearInterval(journeyIntervalRef.current);
+        }
+    };
+}, [isJourneyStarted, initialTripData]);
+
+  
+  const handleStationSelect = (station) => {
+    setSelectedStation(station);
+  };
+
+  const handleEndSession = (cost) => {
+    setWalletBalance((prev) => prev - cost);
+    setSelectedStation(null);
+    if(selectedStation && bookedStationIds.includes(selectedStation.id)){
+        setBookedStationIds(prev => prev.filter(id => id !== selectedStation.id))
+    }
+  };
+
+  const handleRecharge = (amount) => {
+    setWalletBalance((prev) => prev + amount);
+    setIsRechargeOpen(false);
+    toast({
+        title: "Recharge Successful",
+        description: `Successfully added ₹${amount.toFixed(2)} to your wallet.`,
+    });
+  }
+  
+  const handleRouteUpdate = (result) => {
+    if (!result) {
+        setRoute(null);
+        setStations([]);
+        setRequiredStations([]);
+        setInitialTripData(null);
+        setLiveJourneyData(null);
+        setIsJourneyStarted(false); // Make sure journey is ended
+        
+        // When clearing the route, fetch stations around the current location.
+        if (currentLocation) {
+            findStations({ latitude: currentLocation.lat, longitude: currentLocation.lng, radius: 10000 })
+                .then(setStations)
+                .catch(err => {
+                    console.error("Error finding stations after clearing route:", err);
+                    toast({ variant: 'destructive', title: 'Could not find nearby stations.'});
+                    setStations([]);
+                });
+        } else {
+            // If no location, clear stations list
+            setStations([]);
+        }
+        return;
+    }
+
+    setRoute(result.route);
+    setRequiredStations(result.requiredChargingStations);
+
+    // Combine required stations and all other nearby stations, removing duplicates
+    const allStations = [...result.requiredChargingStations, ...result.allNearbyStations];
+    const uniqueStationIds = new Set();
+    const uniqueStations = allStations.filter(station => {
+        if (!uniqueStationIds.has(station.id)) {
+            uniqueStationIds.add(station.id);
+            return true;
+        }
+        return false;
+    });
+    setStations(uniqueStations);
+    
+    setInitialTripData({ distance: result.totalDistance, duration: result.totalDuration });
+    
+    const leg = result.route.routes[0]?.legs[0];
+    if (leg) {
+        const arrivalTime = add(new Date(), {seconds: result.totalDuration});
+        setLiveJourneyData({
+            distance: formatDistance(result.totalDistance),
+            duration: formatDuration(result.totalDuration),
+            endAddress: leg.end_address || 'Destination',
+            estimatedArrivalTime: arrivalTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        });
+    } else {
+        setLiveJourneyData(null);
+    }
+  }
+
+  const handlePlanRoute = async (origin, destination) => {
+    if (!userVehicle) {
+        toast({ variant: 'destructive', title: 'Please select a vehicle first.' });
+        return;
+    }
+    setIsPlanningRoute(true);
+    handleRouteUpdate(null);
+    setSelectedStation(null);
+
+    try {
+        const result = await planRoute({
+            origin,
+            destination,
+            vehicle: userVehicle
+        });
+        handleRouteUpdate(result);
+    } catch (error) {
+        console.error("Failed to plan route:", error);
+        toast({ variant: 'destructive', title: 'Failed to plan route.' });
+    } finally {
+        setIsPlanningRoute(false);
+    }
+  };
+
+  const handleClearRoute = () => {
+    handleRouteUpdate(null);
+  };
+  
+  const handleStartJourney = () => {
+    if (route && liveJourneyData) {
+        setIsJourneyStarted(true);
+        // When journey starts, only show the required stations on the map.
+        setStations(requiredStations);
+        toast({
+            title: "Journey Started!",
+            description: "Live tracking is now active. The map will follow your location.",
+        });
+    }
+  }
+
+  const handleBookingConfirm = async (date, time) => {
+    if (!user || !selectedStation) {
+      toast({ variant: "destructive", title: "Cannot create booking", description: "You must be signed in and select a station." });
+      return;
+    }
+
+    setIsBookingOpen(false);
+
+    // Combine date and time
+    const [hours, minutes] = time.split(':');
+    const bookingDateTime = new Date(date);
+    bookingDateTime.setHours(parseInt(hours, 10));
+    bookingDateTime.setMinutes(parseInt(minutes, 10));
+    bookingDateTime.setSeconds(0);
+
+    try {
+      await createBooking(user.uid, selectedStation, bookingDateTime);
+      setBookedStationIds(prev => [...prev, selectedStation.id]);
+      toast({
+        title: "Slot Booked!",
+        description: `Your slot at ${selectedStation?.name} is confirmed for ${bookingDateTime.toLocaleDateString()} at ${time}.`,
+      });
+    } catch (error) {
+      console.error("Booking failed:", error);
+      toast({
+        variant: "destructive",
+        title: "Booking Failed",
+        description: "Could not book the slot. Please try again.",
+      });
+    }
+  }
+
+  const handleStationsFound = useCallback((foundStations) => {
+    if (!route) { // Only update stations if a route is not active
+        setStations(foundStations);
+    }
+  }, [route]);
+
+
+  if (loading || (!user && !isGuest) || !userVehicle) {
+    return (
+        <div className="relative h-screen w-screen">
+            <Skeleton className="h-full w-full" />
+            <div className="absolute top-4 left-4 z-10">
+                <Skeleton className="h-[600px] w-[400px]" />
+            </div>
+        </div>
+    );
+  }
+
+  return (
+      <SidebarProvider>
+        <Sidebar variant="floating" side="left">
+          <SidebarRail />
+          <SidebarContent className="p-4">
+              <Controls
+                  userVehicle={userVehicle}
+                  walletBalance={walletBalance}
+                  setIsRechargeOpen={setIsRechargeOpen}
+                  selectedStation={selectedStation}
+                  handleEndSession={handleEndSession}
+                  handleStationSelect={handleStationSelect}
+                  handlePlanRoute={handlePlanRoute}
+                  isPlanningRoute={isPlanningRoute}
+                  isRechargeOpen={isRechargeOpen}
+                  handleRecharge={handleRecharge}
+                  currentLocation={currentLocation}
+                  hasRoute={!!route}
+                  onClearRoute={handleClearRoute}
+                  isJourneyStarted={isJourneyStarted}
+                  onStartJourney={handleStartJourney}
+                  liveJourneyData={liveJourneyData}
+                  isBookingOpen={isBookingOpen}
+                  setIsBookingOpen={setIsBookingOpen}
+                  onBookingConfirm={handleBookingConfirm}
+                  isGuest={isGuest}
+                  hasActiveBooking={bookedStationIds.length > 0}
+              />
+          </SidebarContent>
+        </Sidebar>
+        <SidebarInset>
+          <Header 
+            mapTypeId={mapTypeId}
+            onMapTypeIdChange={setMapTypeId}
+            showTraffic={showTraffic}
+            onShowTrafficChange={setShowTraffic}
+            onRecenter={recenterMap}
+          />
+            <MapView 
+                onStationsFound={handleStationsFound} 
+                stations={stations}
+                onStationClick={handleStationSelect}
+                route={route}
+                onLocationUpdate={setCurrentLocation}
+                currentLocation={currentLocation}
+                isJourneyStarted={isJourneyStarted}
+                onReRoute={handlePlanRoute}
+                mapTypeId={mapTypeId}
+                showTraffic={showTraffic}
+                bookedStationIds={bookedStationIds}
+                requiredStationIds={requiredStations.map(s => s.id)}
+                setRecenterCallback={setRecenterMap}
+            />
+        </SidebarInset>
+        <Toaster />
+      </SidebarProvider>
+  );
+}
+
+export default function Home() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center h-screen w-screen bg-background"><p>Loading...</p></div>}>
+      <HomePageContent />
+    </Suspense>
+  )
+}
