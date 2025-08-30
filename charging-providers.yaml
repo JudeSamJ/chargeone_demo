@@ -1,0 +1,66 @@
+
+# This file configures the integration with various EV charging network providers.
+# It allows the application to adapt to different API structures without changing the core code.
+
+providers:
+  ChargePoint:
+    baseUrl: "https://api.chargepoint.com/v1" # This is a fictional API endpoint for demonstration
+    authentication:
+      type: "apiKey"
+      # The actual key should be stored in environment variables or a secret manager.
+      # The value here points to the environment variable name.
+      secretName: "CHARGEPOINT_API_KEY"
+    endpoints:
+      startSession:
+        path: "/sessions/start"
+        method: "POST"
+        # Maps our internal parameter names to the provider's expected names.
+        paramMapping:
+          stationId: "station_id"
+          connectorId: "connector_number"
+          userId: "user_identifier"
+        # Defines the expected structure of a successful response.
+        responseMapping:
+          sessionId: "session_id"
+          status: "charging_status"
+      stopSession:
+        path: "/sessions/stop"
+        method: "POST"
+        paramMapping:
+          sessionId: "session_id"
+        responseMapping:
+          status: "final_status"
+          cost: "total_cost"
+      getSessionStatus:
+        path: "/sessions/{sessionId}/status"
+        method: "GET"
+        paramMapping: {} # No body params for GET, sessionId is in path
+        responseMapping:
+          status: "current_status"
+          energyConsumed: "kwh_delivered"
+          timeElapsed: "duration_seconds"
+      listActiveSessions:
+        path: "/sessions/active"
+        method: "GET"
+        paramMapping:
+          userId: "user_id"
+        responseMapping:
+          sessions: "active_sessions"
+  # Example for another provider to show flexibility
+  ShellRecharge:
+    baseUrl: "https://api.shellrecharge.com/v2" # Fictional endpoint
+    authentication:
+      type: "bearerToken"
+      secretName: "SHELL_RECHARGE_TOKEN"
+    endpoints:
+      startSession:
+        path: "/charge/start"
+        method: "POST"
+        paramMapping:
+          stationId: "stationIdentifier"
+          connectorId: "connector"
+          userId: "driverId"
+        responseMapping:
+          sessionId: "chargeSessionId"
+          status: "status"
+      # ... other endpoints for ShellRecharge
