@@ -33,8 +33,7 @@ const planRouteFlow = ai.defineFlow(
     const safetyBufferKm = 50; // Leave a 50km buffer
     let currentChargeKm = vehicleMaxRangeKm * (vehicle.currentCharge / 100);
     
-    const requiredStations: Station[] = [];
-    const allFoundStations: Station[] = [];
+    let requiredStations: Station[] = [];
     let totalChargingTimeSeconds = 0;
 
     if (!leg.steps || leg.steps.length === 0) {
@@ -60,19 +59,17 @@ const planRouteFlow = ai.defineFlow(
                 longitude: searchPoint.lng,
                 radius: 50000, // 50km search radius
             });
-            
-            // Add all found stations to our list
+
+            // Add all found stations to our list of potential stops
             nearbyStations.forEach(s => {
-                if (!allFoundStations.some(fs => fs.id === s.id)) {
-                    allFoundStations.push(s);
+                if (!requiredStations.some(rs => rs.id === s.id)) {
+                    requiredStations.push(s);
                 }
             });
 
             const bestStation = nearbyStations.find(s => s.status === 'available');
 
             if (bestStation) {
-                requiredStations.push(bestStation);
-
                 // Estimate charging time.
                 // Assuming we charge from ~10% to 80% (a 70% charge)
                 const chargeNeededKwh = vehicle.batteryCapacity * 0.7;
@@ -93,6 +90,17 @@ const planRouteFlow = ai.defineFlow(
         currentChargeKm -= stepDistanceKm;
     }
 
+    // Sort all found stations to prioritize the best ones.
+    requiredStations.sort((a, b) => {
+        if (a.status === 'available' && b.status !== 'available') return -1;
+        if (a.status !== 'available' && b.status === 'available') return 1;
+        if (a.power !== b.power) return b.power - a.power; // Higher power is better
+        return a.distance - b.distance; // Closer is better
+    });
+
+    // Filter down to the best 3 required stations.
+    const bestRequiredStations = requiredStations.slice(0, 3);
+
     const totalDriveDurationSeconds = leg.duration?.value || 0;
     const totalDurationSeconds = totalDriveDurationSeconds + totalChargingTimeSeconds;
     const totalDistanceMeters = leg.distance?.value || 0;
@@ -100,8 +108,8 @@ const planRouteFlow = ai.defineFlow(
 
     return {
       route: directionsResult,
-      requiredChargingStations: requiredStations,
-      allNearbyStations: allFoundStations,
+      requiredChargingStations: bestRequiredStations,
+      allNearbyStations: [], // We no longer need to return all nearby stations
       totalDistance: totalDistanceMeters,
       totalDuration: totalDurationSeconds,
     };
