@@ -71,7 +71,6 @@ export default function MapView({
     const { toast } = useToast();
     const mapRef = useRef<google.maps.Map | null>(null);
     const { theme } = useTheme();
-    const stationsFetchedRef = useRef(false);
     const lastRerouteTimeRef = useRef<number>(0);
     const [locationReady, setLocationReady] = useState(false);
     const initialLocationSetRef = useRef(false);
@@ -99,8 +98,7 @@ export default function MapView({
                 toast({ title: "Could not get your location. Showing default." });
                 onLocationUpdate(defaultCenter); // Set default location on error
                 setLocationReady(true);
-                if (!stationsFetchedRef.current && !route) {
-                    stationsFetchedRef.current = true;
+                if (!route) {
                     fetchStations(defaultCenter.lat, defaultCenter.lng, 10000);
                 }
             }
@@ -119,11 +117,8 @@ export default function MapView({
                         setLocationReady(true);
                     }
     
-                    if (mapRef.current && !initialLocationSetRef.current) {
-                        mapRef.current.panTo(currentPos);
-                        mapRef.current.setZoom(14);
-                        if (!stationsFetchedRef.current && !route) {
-                            stationsFetchedRef.current = true;
+                    if (!initialLocationSetRef.current) {
+                        if (mapRef.current && !route) {
                             fetchStations(currentPos.lat, currentPos.lng, 10000);
                         }
                         initialLocationSetRef.current = true;
@@ -147,13 +142,6 @@ export default function MapView({
         }
     }, [isJourneyStarted, currentLocation]);
 
-     useEffect(() => {
-        if (!route) {
-            stationsFetchedRef.current = false;
-        } else {
-            stationsFetchedRef.current = true; // A route is active, don't fetch stations on move
-        }
-    }, [route]);
 
     const decodedPath = useMemo(() => {
       if (route && isLoaded && route.routes[0]?.overview_polyline?.points) {
@@ -303,8 +291,8 @@ export default function MapView({
     return (
         <GoogleMap
             mapContainerStyle={mapContainerStyle}
-            center={currentLocation || defaultCenter}
-            zoom={14}
+            center={defaultCenter}
+            zoom={12}
             onLoad={onMapLoad}
             onClick={() => setActiveMarker(null)}
             mapTypeId={mapTypeId}
