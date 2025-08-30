@@ -44,10 +44,8 @@ interface MapViewProps {
 }
 
 interface ActiveMarkerInfo {
-    id: string;
     position: google.maps.LatLngLiteral;
-    title?: string;
-    isStation: boolean;
+    content: Station | { title: string };
 }
 
 export default function MapView({ 
@@ -331,8 +329,9 @@ export default function MapView({
 
     if (loadError) return <div className="flex items-center justify-center h-full w-full bg-muted rounded-lg"><p>Error loading map</p></div>;
     if (!isLoaded || !locationReady) return <div className="flex items-center justify-center h-full w-full bg-muted rounded-lg"><p>Getting your location...</p></div>;
-
-    const activeStation = activeMarker?.isStation ? stations.find(s => s.id === activeMarker.id) : null;
+    
+    const activeStation = activeMarker && 'name' in activeMarker.content ? activeMarker.content : null;
+    const activeTitle = activeMarker && 'title' in activeMarker.content ? activeMarker.content.title : null;
 
     return (
         <GoogleMap
@@ -356,7 +355,7 @@ export default function MapView({
                   <MarkerF
                       position={currentLocation}
                       title="Your Location"
-                      onMouseOver={() => setActiveMarker({ id: 'currentLocation', position: currentLocation, title: 'Your Location', isStation: false })}
+                      onMouseOver={() => setActiveMarker({ position: currentLocation, content: { title: 'Your Location' } })}
                       icon={{
                           path: google.maps.SymbolPath.CIRCLE,
                           fillColor: '#4285F4',
@@ -374,7 +373,7 @@ export default function MapView({
                         position={{ lat: station.lat, lng: station.lng }}
                         title={`${station.name} (${station.power}kW)`}
                         onClick={() => onStationClick(station)}
-                        onMouseOver={() => setActiveMarker({ id: station.id, position: { lat: station.lat, lng: station.lng }, isStation: true })}
+                        onMouseOver={() => setActiveMarker({ position: { lat: station.lat, lng: station.lng }, content: station })}
                         icon={getStationMarkerIcon(station)}
                         zIndex={requiredStationIds.includes(station.id) ? 2 : 1}
                     />
@@ -415,7 +414,7 @@ export default function MapView({
                                </div>
                             </div>
                         ) : (
-                           <div className="p-1 font-bold">{activeMarker.title}</div>
+                           <div className="p-1 font-bold">{activeTitle}</div>
                         )}
                     </InfoWindowF>
                 )}
@@ -435,7 +434,7 @@ export default function MapView({
                     <MarkerF
                         position={originMarker.position}
                         title="Origin"
-                        onMouseOver={() => setActiveMarker({ id: 'origin', position: originMarker.position, title: 'Origin', isStation: false })}
+                        onMouseOver={() => setActiveMarker({ position: originMarker.position, content: { title: 'Origin' } })}
                         icon={originMarker.icon}
                     />
                 )}
@@ -444,7 +443,7 @@ export default function MapView({
                     <MarkerF
                         position={destinationMarker.position}
                         title="Destination"
-                        onMouseOver={() => setActiveMarker({ id: 'destination', position: destinationMarker.position, title: 'Destination', isStation: false })}
+                        onMouseOver={() => setActiveMarker({ position: destinationMarker.position, content: { title: 'Destination' } })}
                         icon={destinationMarker.icon}
                     />
                 )}
