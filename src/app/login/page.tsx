@@ -14,20 +14,19 @@ export default function LoginPage() {
 
     useEffect(() => {
         if (!loading && user) {
-            // If user is logged in, check if they have a vehicle saved
-            const storedVehicle = localStorage.getItem('userVehicle');
-            if (storedVehicle) {
-                router.push('/');
-            } else {
-                router.push('/vehicle-details');
-            }
+            // User is logged in, but we will not redirect automatically.
+            // The user can navigate manually.
+            // For example, they might want to go to the main page:
+            // router.push('/');
         }
     }, [user, loading, router]);
 
     const handleLogin = async () => {
         try {
             await signInWithGoogle();
-            // The useEffect will handle redirection
+            // After successful login, the useEffect will run, but no redirection will happen.
+            // Manually redirecting to the vehicle details page to ensure a vehicle is selected.
+            router.push('/vehicle-details');
         } catch (error) {
             console.error("Login failed", error);
         }
@@ -37,8 +36,29 @@ export default function LoginPage() {
         router.push('/?guest=true');
     }
 
-    if (loading || user) {
+    if (loading) {
         return <div className="flex items-center justify-center min-h-screen bg-background"><p>Loading...</p></div>;
+    }
+
+    // If user is already logged in, show a different message or a button to continue.
+    if (user) {
+        return (
+            <div className="flex items-center justify-center min-h-screen bg-background">
+                <Card className="w-full max-w-sm mx-4">
+                    <CardHeader className="text-center">
+                        <CardTitle className="text-2xl">You are signed in</CardTitle>
+                        <CardDescription>
+                            You have successfully signed in.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent className="grid gap-4">
+                        <Button className="w-full" onClick={() => router.push('/')}>
+                            Go to Dashboard
+                        </Button>
+                    </CardContent>
+                </Card>
+            </div>
+        )
     }
 
     return (
