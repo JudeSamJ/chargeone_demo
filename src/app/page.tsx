@@ -142,6 +142,7 @@ function HomePageContent() {
         setRequiredStations([]);
         setInitialTripData(null);
         setLiveJourneyData(null);
+        setIsJourneyStarted(false); // Make sure journey is ended
         return;
     }
 
@@ -201,12 +202,7 @@ function HomePageContent() {
   };
 
   const handleClearRoute = () => {
-    setRoute(null);
-    setRequiredStations([]);
-    setSelectedStation(null);
-    setIsJourneyStarted(false);
-    setLiveJourneyData(null);
-    setInitialTripData(null);
+    handleRouteUpdate(null);
     // When clearing the route, fetch stations around the current location.
     if (currentLocation) {
         findStations({ latitude: currentLocation.lat, longitude: currentLocation.lng, radius: 10000 })
