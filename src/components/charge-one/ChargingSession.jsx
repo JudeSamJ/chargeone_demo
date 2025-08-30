@@ -5,10 +5,20 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { Bolt, Timer, BatteryCharging, Power, CheckCircle, Zap, X, Undo2, CalendarClock } from 'lucide-react';
+import { Bolt, Timer, BatteryCharging, Power, CheckCircle, Zap, X, Undo2, CalendarClock, Ban } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
-export default function ChargingSession({ station, vehicle, onEndSession, onClearSelection, onBookSlot, isGuest, hasActiveBooking }) {
+export default function ChargingSession({ 
+  station, 
+  vehicle, 
+  onEndSession, 
+  onClearSelection, 
+  onBookSlot, 
+  isGuest,
+  activeBooking,
+  hasOtherBooking,
+  onCancelBooking,
+}) {
   const [isCharging, setIsCharging] = useState(false);
   const [sessionFinished, setSessionFinished] = useState(false);
   const [elapsedTime, setElapsedTime] = useState(0);
@@ -87,9 +97,13 @@ export default function ChargingSession({ station, vehicle, onEndSession, onClea
     onBookSlot();
   }
 
+  const handleCancelBookingClick = () => {
+    if (activeBooking) {
+      onCancelBooking(activeBooking);
+    }
+  }
+
   if (!station) {
-    // This component now returns null if no station is selected,
-    // as the main page will conditionally render it.
     return null;
   }
 
@@ -173,14 +187,24 @@ export default function ChargingSession({ station, vehicle, onEndSession, onClea
                 <BatteryCharging className="mr-2 h-4 w-4" /> Start Charging
             </Button>
             {station.hasSlotBooking && (
-                <Button 
-                    onClick={handleBookSlotClick} 
-                    className="w-full" 
-                    variant="outline" 
-                    disabled={isGuest}
-                >
-                    <CalendarClock className="mr-2 h-4 w-4" /> Book Slot
-                </Button>
+              <>
+                {activeBooking ? (
+                  <Button onClick={handleCancelBookingClick} className="w-full" variant="destructive">
+                      <X className="mr-2 h-4 w-4" /> Cancel Booking
+                  </Button>
+                ) : (
+                  <Button 
+                      onClick={handleBookSlotClick} 
+                      className="w-full" 
+                      variant="outline" 
+                      disabled={isGuest || hasOtherBooking}
+                      title={hasOtherBooking ? "You already have an active booking." : ""}
+                  >
+                      {hasOtherBooking ? <Ban className="mr-2 h-4 w-4" /> : <CalendarClock className="mr-2 h-4 w-4" />}
+                      Book Slot
+                  </Button>
+                )}
+              </>
             )}
           </div>
         )}

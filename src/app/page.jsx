@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, Suspense, useEffect, useCallback, useRef } from 'react';
@@ -14,8 +15,8 @@ import Controls from '@/components/charge-one/Controls';
 import { SidebarProvider, Sidebar, SidebarInset, SidebarContent, SidebarRail } from '@/components/ui/sidebar';
 import Header from '@/components/charge-one/Header';
 import { formatDuration, formatDistance } from './utils';
-import { add } from 'date-fns';
-import { createBooking, getUserBookings } from '@/lib/firestore';
+import { add, differenceInMinutes } from 'date-fns';
+import { createBooking, getUserBookings, cancelBooking } from '@/lib/firestore';
 
 function HomePageContent() {
   const [stations, setStations] = useState([]);
@@ -24,7 +25,7 @@ function HomePageContent() {
   const [walletBalance, setWalletBalance] = useState(0);
   const [isRechargeOpen, setIsRechargeOpen] = useState(false);
   const [isBookingOpen, setIsBookingOpen] = useState(false);
-  const [bookedStationIds, setBookedStationIds] = useState([]);
+  const [userBookings, setUserBookings] = useState([]);
   const [userVehicle, setUserVehicle] = useState(null);
   const [route, setRoute] = useState(null);
   const [isPlanningRoute, setIsPlanningRoute] = useState(false);
@@ -43,6 +44,16 @@ function HomePageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const isGuest = searchParams.get('guest') === 'true';
+
+  const fetchUserBookings = useCallback(async (uid) => {
+    try {
+        const bookings = await getUserBookings(uid);
+        setUserBookings(bookings);
+    } catch (err) {
+        console.error("Failed to fetch user bookings:", err);
+        toast({ variant: 'destructive', title: 'Could not load your bookings.' });
+    }
+  }, [toast]);
 
   useEffect(() => {
     if (!loading && !user && !isGuest) {
@@ -64,14 +75,9 @@ function HomePageContent() {
 
   useEffect(() => {
     if (user) {
-      getUserBookings(user.uid)
-        .then(setBookedStationIds)
-        .catch(err => {
-          console.error("Failed to fetch user bookings:", err);
-          toast({ variant: 'destructive', title: 'Could not load your bookings.'});
-        });
+      fetchUserBookings(user.uid);
     }
-  }, [user, toast]);
+  }, [user, fetchUserBookings]);
 
   useEffect(() => {
     if (isJourneyStarted && initialTripData) {
@@ -112,9 +118,6 @@ function HomePageContent() {
   const handleEndSession = (cost) => {
     setWalletBalance((prev) => prev - cost);
     setSelectedStation(null);
-    if(selectedStation && bookedStationIds.includes(selectedStation.id)){
-        setBookedStationIds(prev => prev.filter(id => id !== selectedStation.id))
-    }
   };
 
   const handleRecharge = (amount) => {
@@ -238,7 +241,7 @@ function HomePageContent() {
 
     try {
       await createBooking(user.uid, selectedStation, bookingDateTime);
-      setBookedStationIds(prev => [...prev, selectedStation.id]);
+      await fetchUserBookings(user.uid); // Refresh bookings
       toast({
         title: "Slot Booked!",
         description: `Your slot at ${selectedStation?.name} is confirmed for ${bookingDateTime.toLocaleDateString()} at ${time}.`,
@@ -253,13 +256,43 @@ function HomePageContent() {
     }
   }
 
+  const handleCancelBooking = async (booking) => {
+    if (!user) return;
+  
+    const minutesToBooking = differenceInMinutes(booking.bookingTime, new Date());
+  
+    if (minutesToBooking < 15) {
+      toast({
+        variant: "destructive",
+        title: "Cancellation Failed",
+        description: "Bookings can only be cancelled up to 15 minutes before the start time.",
+      });
+      return;
+    }
+  
+    try {
+      await cancelBooking(booking.id);
+      await fetchUserBookings(user.uid); // Refresh bookings
+      toast({
+        title: "Booking Cancelled",
+        description: `Your booking at ${booking.stationName} has been cancelled.`,
+      });
+    } catch (error) {
+      console.error("Cancellation failed:", error);
+      toast({
+        variant: "destructive",
+        title: "Cancellation Failed",
+        description: "Could not cancel the booking. Please try again.",
+      });
+    }
+  };
+
   const handleStationsFound = useCallback((foundStations) => {
     // Only update stations if a route is not active
     if (!route) {
         setStations(foundStations);
     }
   }, [route]);
-
 
   if (loading || (!user && !isGuest) || !userVehicle) {
     return (
@@ -271,6 +304,9 @@ function HomePageContent() {
         </div>
     );
   }
+  
+  const activeBookingForSelectedStation = selectedStation ? userBookings.find(b => b.stationId === selectedStation.id) : null;
+  const bookedStationIds = userBookings.map(b => b.stationId);
 
   return (
       <SidebarProvider>
@@ -298,7 +334,9 @@ function HomePageContent() {
                   setIsBookingOpen={setIsBookingOpen}
                   onBookingConfirm={handleBookingConfirm}
                   isGuest={isGuest}
-                  hasActiveBooking={bookedStationIds.length > 0}
+                  userBookings={userBookings}
+                  onCancelBooking={handleCancelBooking}
+                  activeBookingForSelectedStation={activeBookingForSelectedStation}
               />
           </SidebarContent>
         </Sidebar>

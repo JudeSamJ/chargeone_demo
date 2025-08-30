@@ -25,6 +25,15 @@ export const StationSchema = z.object({
 
 export type Station = z.infer<typeof StationSchema>;
 
+export interface Booking {
+    id: string; // Firestore document ID
+    userId: string;
+    stationId: string;
+    stationName: string;
+    bookingTime: Date;
+    createdAt: Date;
+}
+
 export const FindStationsInputSchema = z.object({
   latitude: z.number(),
   longitude: z.number(),
@@ -60,4 +69,3 @@ export const PlanRouteOutputSchema = z.object({
 
 export type PlanRouteInput = z.infer<typeof PlanRouteInputSchema>;
 export type PlanRouteOutput = z.infer<typeof PlanRouteOutputSchema>;
-

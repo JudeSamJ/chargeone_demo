@@ -2,16 +2,8 @@
 "use server";
 
 import { db } from './firebase'; // Use client-side firebase
-import { collection, addDoc, Timestamp, query, where, getDocs } from 'firebase/firestore';
-import type { Station } from './types';
-
-interface BookingData {
-    userId: string;
-    stationId: string;
-    stationName: string;
-    bookingTime: Date;
-    createdAt: Date;
-}
+import { collection, addDoc, Timestamp, query, where, getDocs, doc, deleteDoc, orderBy } from 'firebase/firestore';
+import type { Station, Booking } from './types';
 
 export const createBooking = async (
     userId: string, 
@@ -34,23 +26,42 @@ export const createBooking = async (
     }
 }
 
-export const getUserBookings = async (userId: string): Promise<string[]> => {
+export const getUserBookings = async (userId: string): Promise<Booking[]> => {
     try {
         const bookingsCollection = collection(db, 'bookings');
-        const q = query(bookingsCollection, where("userId", "==", userId));
+        const q = query(
+            bookingsCollection, 
+            where("userId", "==", userId),
+            where("bookingTime", ">", Timestamp.now()), // Only get future bookings
+            orderBy("bookingTime", "asc") // Order by the soonest
+        );
         const querySnapshot = await getDocs(q);
         
-        const stationIds: string[] = [];
+        const bookings: Booking[] = [];
         querySnapshot.forEach((doc) => {
             const data = doc.data();
-            // Assuming future bookings are what we care about showing
-            if (data.bookingTime.toDate() > new Date()) {
-                stationIds.push(data.stationId);
-            }
+            bookings.push({
+                id: doc.id,
+                userId: data.userId,
+                stationId: data.stationId,
+                stationName: data.stationName,
+                bookingTime: data.bookingTime.toDate(),
+                createdAt: data.createdAt.toDate(),
+            });
         });
-        return stationIds;
+        return bookings;
     } catch (e) {
         console.error("Error getting documents: ", e);
         throw new Error("Could not fetch user bookings.");
+    }
+}
+
+export const cancelBooking = async (bookingId: string): Promise<void> => {
+    try {
+        const bookingDocRef = doc(db, 'bookings', bookingId);
+        await deleteDoc(bookingDocRef);
+    } catch (e) {
+        console.error("Error deleting document: ", e);
+        throw new Error("Could not cancel booking.");
     }
 }

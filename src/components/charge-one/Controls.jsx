@@ -8,9 +8,12 @@ import RoutePlanner from "./RoutePlanner";
 import RechargeDialog from "./RechargeDialog";
 import LiveNavigationCard from "./LiveNavigationCard";
 import BookingDialog from "./BookingDialog";
+import MyBookings from "./MyBookings";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
-import { Navigation, X } from 'lucide-react';
+import { Navigation, X, Route, CalendarDays } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+
 
 export default function Controls({
     userVehicle,
@@ -33,7 +36,9 @@ export default function Controls({
     setIsBookingOpen,
     onBookingConfirm,
     isGuest,
-    hasActiveBooking
+    userBookings,
+    onCancelBooking,
+    activeBookingForSelectedStation
 }) {
 
     const ActiveRouteCard = () => (
@@ -59,6 +64,8 @@ export default function Controls({
             </CardFooter>
         </Card>
     );
+    
+    const showRoutePlanner = !selectedStation && !isJourneyStarted && !hasRoute;
 
     return (
         <>
@@ -73,7 +80,9 @@ export default function Controls({
                         vehicle={userVehicle}
                         onBookSlot={() => setIsBookingOpen(true)}
                         isGuest={isGuest}
-                        hasActiveBooking={hasActiveBooking}
+                        onCancelBooking={onCancelBooking}
+                        activeBooking={activeBookingForSelectedStation}
+                        hasOtherBooking={userBookings.length > 0 && !activeBookingForSelectedStation}
                     />
                 ) : isJourneyStarted && liveJourneyData ? (
                     <LiveNavigationCard 
@@ -83,7 +92,22 @@ export default function Controls({
                 ) : hasRoute ? (
                      <ActiveRouteCard />
                 ) : (
-                    <RoutePlanner onPlanRoute={handlePlanRoute} isPlanning={isPlanningRoute} currentLocation={currentLocation}/>
+                    <Tabs defaultValue="planner" className="w-full">
+                        <TabsList className="grid w-full grid-cols-2">
+                            <TabsTrigger value="planner"><Route className="mr-2"/>Planner</TabsTrigger>
+                            <TabsTrigger value="bookings" disabled={isGuest}><CalendarDays className="mr-2"/>Bookings</TabsTrigger>
+                        </TabsList>
+                        <TabsContent value="planner">
+                            <RoutePlanner onPlanRoute={handlePlanRoute} isPlanning={isPlanningRoute} currentLocation={currentLocation}/>
+                        </TabsContent>
+                        <TabsContent value="bookings">
+                            <MyBookings 
+                                bookings={userBookings} 
+                                onCancelBooking={onCancelBooking} 
+                                onSelectStation={handleStationSelect}
+                            />
+                        </TabsContent>
+                    </Tabs>
                 )}
             </div>
              <RechargeDialog 
