@@ -132,21 +132,21 @@ export default function MapView({
 
     const decodedPath = useMemo(() => {
       if (route && isLoaded && route.routes[0]?.overview_polyline?.points) {
-          return google.maps.geometry.encoding.decodePath(route.routes[0].overview_polyline.points);
+          return window.google.maps.geometry.encoding.decodePath(route.routes[0].overview_polyline.points);
       }
       return [];
     }, [route, isLoaded]);
 
     // Rerouting logic effect
     useEffect(() => {
-        if (isJourneyStarted && route && currentLocation && decodedPath.length > 0) {
+        if (isJourneyStarted && route && currentLocation && decodedPath.length > 0 && isLoaded) {
             const now = Date.now();
             if (now - lastRerouteTimeRef.current > 10000) { // Throttle rerouting checks
-                const userLatLng = new google.maps.LatLng(currentLocation.lat, currentLocation.lng);
+                const userLatLng = new window.google.maps.LatLng(currentLocation.lat, currentLocation.lng);
                 
-                if (google.maps.geometry.poly.isLocationOnEdge(userLatLng, new google.maps.Polyline({ path: decodedPath }), REROUTE_THRESHOLD / 1000) === false) {
+                if (window.google.maps.geometry.poly.isLocationOnEdge(userLatLng, new window.google.maps.Polyline({ path: decodedPath }), REROUTE_THRESHOLD / 1000) === false) {
                      const distanceToRoute = decodedPath.reduce((minDist, point) => {
-                         const dist = google.maps.geometry.spherical.computeDistanceBetween(userLatLng, point);
+                         const dist = window.google.maps.geometry.spherical.computeDistanceBetween(userLatLng, point);
                          return Math.min(minDist, dist);
                      }, Infinity);
 
@@ -161,19 +161,19 @@ export default function MapView({
                 }
             }
         }
-    }, [isJourneyStarted, route, currentLocation, decodedPath, onReRoute, toast]);
+    }, [isJourneyStarted, route, currentLocation, decodedPath, onReRoute, toast, isLoaded]);
 
 
     useEffect(() => {
         if (route && mapRef.current && isLoaded) {
-            const bounds = new google.maps.LatLngBounds();
+            const bounds = new window.google.maps.LatLngBounds();
             
             const routeBounds = route.routes[0]?.bounds;
             if (routeBounds) {
                 const ne = routeBounds.northeast;
                 const sw = routeBounds.southwest;
-                bounds.extend(new google.maps.LatLng(ne.lat, ne.lng));
-                bounds.extend(new google.maps.LatLng(sw.lat, sw.lng));
+                bounds.extend(new window.google.maps.LatLng(ne.lat, ne.lng));
+                bounds.extend(new window.google.maps.LatLng(sw.lat, sw.lng));
             }
             if (!bounds.isEmpty()) {
               mapRef.current.fitBounds(bounds);
@@ -186,7 +186,7 @@ export default function MapView({
 
         if (requiredStationIds.includes(station.id)) {
             return {
-                path: google.maps.SymbolPath.CIRCLE,
+                path: window.google.maps.SymbolPath.CIRCLE,
                 fillColor: '#3b82f6', // A bright blue for required stations
                 fillOpacity: 1,
                 strokeColor: '#ffffff',
@@ -203,7 +203,7 @@ export default function MapView({
                 strokeColor: '#ffffff',
                 strokeWeight: 1.5,
                 scale: 1.2,
-                anchor: new google.maps.Point(12, 12),
+                anchor: new window.google.maps.Point(12, 12),
             };
         }
 
@@ -215,7 +215,7 @@ export default function MapView({
         }
 
         return {
-            path: google.maps.SymbolPath.CIRCLE,
+            path: window.google.maps.SymbolPath.CIRCLE,
             fillColor: color,
             fillOpacity: 1,
             strokeColor: '#ffffff',
@@ -239,7 +239,7 @@ export default function MapView({
                 strokeColor: '#ffffff',
                 strokeWeight: 1.5,
                 scale: 2,
-                anchor: new google.maps.Point(12, 24),
+                anchor: new window.google.maps.Point(12, 24),
             }
         };
     };
@@ -259,7 +259,7 @@ export default function MapView({
             strokeColor: '#ffffff',
             strokeWeight: 1.5,
             scale: 2,
-            anchor: new google.maps.Point(12, 24),
+            anchor: new window.google.maps.Point(12, 24),
         }
       }
     };
@@ -298,7 +298,7 @@ export default function MapView({
                       title="Your Location"
                       onMouseOver={() => setActiveMarker({ position: currentLocation, content: { title: 'Your Location' } })}
                       icon={{
-                          path: google.maps.SymbolPath.CIRCLE,
+                          path: window.google.maps.SymbolPath.CIRCLE,
                           fillColor: '#4285F4',
                           fillOpacity: 1,
                           strokeColor: '#ffffff',
@@ -324,7 +324,7 @@ export default function MapView({
                     <InfoWindowF
                         position={activeMarker.position}
                         onCloseClick={() => setActiveMarker(null)}
-                        options={{ pixelOffset: new google.maps.Size(0, -30) }}
+                        options={{ pixelOffset: new window.google.maps.Size(0, -30) }}
                     >
                        {activeStation ? (
                             <div className="p-1 max-w-xs">

@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, Suspense, useEffect, useCallback, useRef } from 'react';
@@ -130,7 +129,6 @@ function HomePageContent() {
   const handleRouteUpdate = (result) => {
     if (!result) {
         setRoute(null);
-        setStations([]);
         setRequiredStations([]);
         setInitialTripData(null);
         setLiveJourneyData(null);
@@ -156,7 +154,7 @@ function HomePageContent() {
     setRequiredStations(result.requiredChargingStations);
 
     // Combine required stations and all other nearby stations, removing duplicates
-    const allStations = [...result.requiredChargingStations, ...result.allNearbyStations];
+    const allStations = [...result.requiredChargingStations];
     const uniqueStationIds = new Set();
     const uniqueStations = allStations.filter(station => {
         if (!uniqueStationIds.has(station.id)) {
@@ -256,7 +254,8 @@ function HomePageContent() {
   }
 
   const handleStationsFound = useCallback((foundStations) => {
-    if (!route) { // Only update stations if a route is not active
+    // Only update stations if a route is not active
+    if (!route) {
         setStations(foundStations);
     }
   }, [route]);
@@ -297,7 +296,7 @@ function HomePageContent() {
                   liveJourneyData={liveJourneyData}
                   isBookingOpen={isBookingOpen}
                   setIsBookingOpen={setIsBookingOpen}
-                  onBookingConfirm={handleBookingConfirm}
+                  onBookingConfirm={onBookingConfirm}
                   isGuest={isGuest}
                   hasActiveBooking={bookedStationIds.length > 0}
               />

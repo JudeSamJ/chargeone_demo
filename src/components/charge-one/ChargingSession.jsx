@@ -10,7 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 
 export default function ChargingSession({ station, vehicle, onEndSession, onClearSelection, onBookSlot, isGuest, hasActiveBooking }) {
   const [isCharging, setIsCharging] = useState(false);
-  const [sessionFinished, setSessionFinished]_useState(false);
+  const [sessionFinished, setSessionFinished] = useState(false);
   const [elapsedTime, setElapsedTime] = useState(0);
   const [energyAdded, setEnergyAdded] = useState(0);
   const [finalCost, setFinalCost] = useState(0);
