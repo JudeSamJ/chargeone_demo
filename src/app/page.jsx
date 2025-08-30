@@ -296,7 +296,7 @@ function HomePageContent() {
                   liveJourneyData={liveJourneyData}
                   isBookingOpen={isBookingOpen}
                   setIsBookingOpen={setIsBookingOpen}
-                  onBookingConfirm={onBookingConfirm}
+                  onBookingConfirm={handleBookingConfirm}
                   isGuest={isGuest}
                   hasActiveBooking={bookedStationIds.length > 0}
               />
