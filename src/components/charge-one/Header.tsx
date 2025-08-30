@@ -1,7 +1,7 @@
 
 "use client";
 
-import { Bolt, LogOut } from 'lucide-react';
+import { Bolt, LogOut, LocateFixed } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { signOutWithGoogle } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
@@ -25,9 +25,10 @@ interface HeaderProps {
     onMapTypeIdChange: (id: string) => void;
     showTraffic: boolean;
     onShowTrafficChange: (show: boolean) => void;
+    onRecenter: () => void;
 }
 
-export default function Header({ mapTypeId, onMapTypeIdChange, showTraffic, onShowTrafficChange }: HeaderProps) {
+export default function Header({ mapTypeId, onMapTypeIdChange, showTraffic, onShowTrafficChange, onRecenter }: HeaderProps) {
     const { user, loading } = useAuth();
     const router = useRouter();
 
@@ -58,6 +59,10 @@ export default function Header({ mapTypeId, onMapTypeIdChange, showTraffic, onSh
                     <h1 className="text-2xl font-bold text-primary font-headline">ChargeOne</h1>
                 </div>
                 <div className="flex items-center gap-2">
+                    <Button variant="outline" size="icon" onClick={onRecenter}>
+                        <LocateFixed className="h-[1.2rem] w-[1.2rem]" />
+                        <span className="sr-only">Recenter Map</span>
+                    </Button>
                     <MapControls 
                         mapTypeId={mapTypeId}
                         onMapTypeIdChange={onMapTypeIdChange}

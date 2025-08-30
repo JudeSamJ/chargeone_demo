@@ -44,7 +44,7 @@ function HomePageContent() {
   const [initialTripData, setInitialTripData] = useState<{distance: number, duration: number} | null>(null);
   const [mapTypeId, setMapTypeId] = useState<string>('roadmap');
   const [showTraffic, setShowTraffic] = useState(false);
-  const initialLocationSetRef = useRef(false);
+  const [recenterMap, setRecenterMap] = useState<() => void>(() => () => {});
   
 
   const { toast } = useToast();
@@ -320,6 +320,7 @@ function HomePageContent() {
             onMapTypeIdChange={setMapTypeId}
             showTraffic={showTraffic}
             onShowTrafficChange={setShowTraffic}
+            onRecenter={recenterMap}
           />
             <MapView 
                 onStationsFound={handleStationsFound} 
@@ -334,6 +335,7 @@ function HomePageContent() {
                 showTraffic={showTraffic}
                 bookedStationIds={bookedStationIds}
                 requiredStationIds={requiredStations.map(s => s.id)}
+                setRecenterCallback={setRecenterMap}
             />
         </SidebarInset>
         <Toaster />

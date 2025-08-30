@@ -41,6 +41,7 @@ interface MapViewProps {
   showTraffic: boolean;
   bookedStationIds: string[];
   requiredStationIds: string[];
+  setRecenterCallback: (callback: () => void) => void;
 }
 
 interface ActiveMarkerInfo {
@@ -60,7 +61,8 @@ export default function MapView({
     mapTypeId,
     showTraffic,
     bookedStationIds,
-    requiredStationIds
+    requiredStationIds,
+    setRecenterCallback
 }: MapViewProps) {
     const { isLoaded, loadError } = useJsApiLoader({
         googleMapsApiKey: "AIzaSyBMltP754BsiINUjJ90C0HE5YE0As2cTcc",
@@ -77,8 +79,13 @@ export default function MapView({
 
     const onMapLoad = useCallback((map: google.maps.Map) => {
         mapRef.current = map;
-        // The centering logic is now handled in the useEffect for location updates
-    }, []);
+        setRecenterCallback(() => () => {
+            if (mapRef.current && currentLocation) {
+                mapRef.current.panTo(currentLocation);
+                mapRef.current.setZoom(14);
+            }
+        });
+    }, [currentLocation, setRecenterCallback]);
 
     const fetchStations = useCallback((lat: number, lng: number, radius: number) => {
         findStations({ latitude: lat, longitude: lng, radius })
@@ -94,8 +101,8 @@ export default function MapView({
     
         const handleLocationError = (error: GeolocationPositionError) => {
             console.error("Geolocation error:", error.message);
+            toast({ title: "Could not get your location. Showing default." });
             if (!locationReady) {
-                toast({ title: "Could not get your location. Showing default." });
                 onLocationUpdate(defaultCenter); // Set default location on error
                 setLocationReady(true);
                 if (!route) {
@@ -117,8 +124,10 @@ export default function MapView({
                         setLocationReady(true);
                     }
     
-                    if (!initialLocationSetRef.current) {
-                        if (mapRef.current && !route) {
+                    if (!initialLocationSetRef.current && mapRef.current) {
+                        mapRef.current.panTo(currentPos);
+                        mapRef.current.setZoom(14);
+                        if (!route) {
                             fetchStations(currentPos.lat, currentPos.lng, 10000);
                         }
                         initialLocationSetRef.current = true;
