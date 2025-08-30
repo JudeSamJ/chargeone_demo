@@ -209,7 +209,23 @@ function HomePageContent() {
   };
 
   const handleClearRoute = () => {
-    handleRouteUpdate(null);
+    setRoute(null);
+    setRequiredStations([]);
+    setInitialTripData(null);
+    setLiveJourneyData(null);
+    setIsJourneyStarted(false);
+    
+    if (currentLocation) {
+        findStations({ latitude: currentLocation.lat, longitude: currentLocation.lng, radius: 10000 })
+            .then(setStations)
+            .catch(err => {
+                console.error("Error finding stations after clearing route:", err);
+                toast({ variant: 'destructive', title: 'Could not find nearby stations.'});
+                setStations([]);
+            });
+    } else {
+        setStations([]);
+    }
   };
   
   const handleStartJourney = () => {
