@@ -143,6 +143,20 @@ function HomePageContent() {
         setInitialTripData(null);
         setLiveJourneyData(null);
         setIsJourneyStarted(false); // Make sure journey is ended
+        
+        // When clearing the route, fetch stations around the current location.
+        if (currentLocation) {
+            findStations({ latitude: currentLocation.lat, longitude: currentLocation.lng, radius: 10000 })
+                .then(setStations)
+                .catch(err => {
+                    console.error("Error finding stations after clearing route:", err);
+                    toast({ variant: 'destructive', title: 'Could not find nearby stations.'});
+                    setStations([]);
+                });
+        } else {
+            // If no location, clear stations list
+            setStations([]);
+        }
         return;
     }
 
@@ -203,19 +217,6 @@ function HomePageContent() {
 
   const handleClearRoute = () => {
     handleRouteUpdate(null);
-    // When clearing the route, fetch stations around the current location.
-    if (currentLocation) {
-        findStations({ latitude: currentLocation.lat, longitude: currentLocation.lng, radius: 10000 })
-            .then(setStations)
-            .catch(err => {
-                console.error("Error finding stations after clearing route:", err);
-                toast({ variant: 'destructive', title: 'Could not find nearby stations.'});
-                setStations([]);
-            });
-    } else {
-        // If no location, clear stations list
-        setStations([]);
-    }
   };
   
   const handleStartJourney = () => {
