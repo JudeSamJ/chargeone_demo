@@ -1,4 +1,3 @@
-
 import { initializeApp, getApps, getApp, FirebaseApp } from "firebase/app";
 import { 
   getAuth, 
@@ -80,7 +79,8 @@ const setupRecaptcha = () => {
 export const signInWithPhoneNumber = (phoneNumber: string): Promise<ConfirmationResult> => {
   setupRecaptcha();
   const appVerifier = window.recaptchaVerifier;
-  return firebaseSignInWithPhoneNumber(auth, phoneNumber, appVerifier);
+  const formattedPhoneNumber = `+91${phoneNumber}`;
+  return firebaseSignInWithPhoneNumber(auth, formattedPhoneNumber, appVerifier);
 };
 
 export const verifyPhoneNumberOtp = (confirmationResult: ConfirmationResult, otp: string) => {

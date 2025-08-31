@@ -23,7 +23,9 @@ const emailSchema = z.object({
 });
 
 const phoneSchema = z.object({
-  phone: z.string().min(10, { message: "Invalid phone number." }),
+  phone: z.string()
+    .length(10, { message: "Phone number must be exactly 10 digits." })
+    .regex(/^[6-9]\d{9}$/, { message: "Please enter a valid Indian mobile number." }),
 });
 
 export default function SignupPage() {
@@ -66,7 +68,7 @@ export default function SignupPage() {
   const onPhoneSubmit = async (data) => {
     setLoading(true);
     try {
-      const result = await signInWithPhoneNumber(`+${data.phone}`);
+      const result = await signInWithPhoneNumber(data.phone);
       setConfirmationResult(result);
       setOtpSent(true);
       toast({ title: "OTP Sent", description: "An OTP has been sent to your phone." });
@@ -154,9 +156,14 @@ export default function SignupPage() {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Phone Number</FormLabel>
-                          <FormControl>
-                            <Input placeholder="9123456789" {...field} />
-                          </FormControl>
+                          <div className="flex items-center gap-2">
+                            <span className="flex h-10 items-center rounded-md border border-input bg-background px-3 py-2 text-sm">
+                                +91
+                            </span>
+                            <FormControl>
+                                <Input placeholder="9876543210" {...field} />
+                            </FormControl>
+                          </div>
                           <FormMessage />
                         </FormItem>
                       )}

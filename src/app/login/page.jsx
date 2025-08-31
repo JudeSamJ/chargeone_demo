@@ -60,9 +60,15 @@ export default function LoginPage() {
     
     const handlePhoneLogin = async (e) => {
         e.preventDefault();
+        const phoneRegex = /^[6-9]\d{9}$/;
+        if (!phoneRegex.test(phone)) {
+            toast({ variant: "destructive", title: "Invalid Phone Number", description: "Please enter a valid 10-digit Indian mobile number." });
+            return;
+        }
+
         setLoading(true);
         try {
-            const result = await signInWithPhoneNumber(`+${phone}`);
+            const result = await signInWithPhoneNumber(phone);
             setConfirmationResult(result);
             setOtpSent(true);
             toast({ title: "OTP Sent", description: "An OTP has been sent to your phone." });
@@ -121,7 +127,12 @@ export default function LoginPage() {
                                 {!otpSent ? (
                                     <div className="space-y-2">
                                         <Label htmlFor="phone">Phone Number</Label>
-                                        <Input id="phone" type="tel" placeholder="9123456789" value={phone} onChange={(e) => setPhone(e.target.value)} required />
+                                        <div className="flex items-center gap-2">
+                                            <span className="flex h-10 items-center rounded-md border border-input bg-background px-3 py-2 text-sm">
+                                                +91
+                                            </span>
+                                            <Input id="phone" type="tel" placeholder="9876543210" value={phone} onChange={(e) => setPhone(e.target.value)} required />
+                                        </div>
                                     </div>
                                 ) : (
                                     <div className="space-y-2">
