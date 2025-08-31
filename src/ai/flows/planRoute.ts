@@ -28,7 +28,6 @@ const planRouteFlow = ai.defineFlow(
     const route = directionsResult.routes[0];
     const leg = route.legs[0];
     
-    // Simplified range: uses 1kWh for 5km as a rough estimate
     const vehicleMaxRangeKm = vehicle.batteryCapacity * 5; 
     const safetyBufferKm = 50; // Leave a 50km buffer
     let currentChargeKm = vehicleMaxRangeKm * (vehicle.currentCharge / 100);

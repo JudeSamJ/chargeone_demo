@@ -1,6 +1,18 @@
 
 import { initializeApp, getApps, getApp, FirebaseApp } from "firebase/app";
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, Auth } from "firebase/auth";
+import { 
+  getAuth, 
+  GoogleAuthProvider, 
+  signInWithPopup, 
+  signOut, 
+  Auth,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  signInWithPhoneNumber as firebaseSignInWithPhoneNumber,
+  RecaptchaVerifier,
+  ConfirmationResult,
+  OAuthProvider
+} from "firebase/auth";
 import { getFirestore, Firestore } from "firebase/firestore";
 
 // The configuration is hardcoded here to bypass environment variable loading issues.
@@ -26,14 +38,54 @@ if (!getApps().length) {
 
 const auth: Auth = getAuth(app);
 const db: Firestore = getFirestore(app);
-const provider = new GoogleAuthProvider();
+
+// Social Providers
+const googleProvider = new GoogleAuthProvider();
+const appleProvider = new OAuthProvider('apple.com');
+
 
 export const signInWithGoogle = () => {
-  return signInWithPopup(auth, provider);
+  return signInWithPopup(auth, googleProvider);
 };
+
+export const signInWithApple = () => {
+    return signInWithPopup(auth, appleProvider);
+}
 
 export const signOutWithGoogle = () => {
   return signOut(auth);
 };
+
+// Email/Password Auth
+export const signUpWithEmail = (email, password) => {
+    return createUserWithEmailAndPassword(auth, email, password);
+};
+
+export const signInWithEmail = (email, password) => {
+    return signInWithEmailAndPassword(auth, email, password);
+};
+
+// Phone Auth
+const setupRecaptcha = () => {
+  if (typeof window !== 'undefined' && !window.recaptchaVerifier) {
+    window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+      'size': 'invisible',
+      'callback': (response) => {
+        // reCAPTCHA solved, allow signInWithPhoneNumber.
+      }
+    });
+  }
+};
+
+export const signInWithPhoneNumber = (phoneNumber: string): Promise<ConfirmationResult> => {
+  setupRecaptcha();
+  const appVerifier = window.recaptchaVerifier;
+  return firebaseSignInWithPhoneNumber(auth, phoneNumber, appVerifier);
+};
+
+export const verifyPhoneNumberOtp = (confirmationResult: ConfirmationResult, otp: string) => {
+  return confirmationResult.confirm(otp);
+};
+
 
 export { auth, app, db };
