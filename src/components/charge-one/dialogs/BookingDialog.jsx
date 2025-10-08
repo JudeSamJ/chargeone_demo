@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -20,21 +20,52 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
+import { isToday, set } from 'date-fns';
 
 export default function BookingDialog({ isOpen, onOpenChange, station, onConfirm }) {
   const [date, setDate] = useState(new Date());
   const [time, setTime] = useState('');
+  const [timeSlots, setTimeSlots] = useState([]);
 
-  const generateTimeSlots = () => {
-    const slots = [];
-    for (let i = 0; i < 24; i++) {
-        slots.push(`${i.toString().padStart(2, '0')}:00`);
-        slots.push(`${i.toString().padStart(2, '0')}:30`);
-    }
-    return slots;
-  };
-  
-  const timeSlots = generateTimeSlots();
+  useEffect(() => {
+    const generateTimeSlots = () => {
+      const now = new Date();
+      const slots = [];
+      const isBookingForToday = isToday(date);
+      
+      let startHour = 0;
+      let startMinute = 0;
+
+      if (isBookingForToday) {
+        startHour = now.getHours();
+        // Round up to the next 30-minute interval
+        if (now.getMinutes() < 30) {
+          startMinute = 30;
+        } else {
+          startHour += 1;
+          startMinute = 0;
+        }
+      }
+
+      for (let i = startHour; i < 24; i++) {
+        const baseDate = set(new Date(), { hours: i, minutes: 0, seconds: 0, milliseconds: 0 });
+        
+        if (i === startHour && startMinute === 30) {
+          // If starting from xx:30
+           slots.push(`${i.toString().padStart(2, '0')}:30`);
+        } else {
+          // Starting from xx:00
+          slots.push(`${i.toString().padStart(2, '0')}:00`);
+          slots.push(`${i.toString().padStart(2, '0')}:30`);
+        }
+      }
+      return slots;
+    };
+    
+    setTimeSlots(generateTimeSlots());
+    // Reset time when date changes
+    setTime('');
+  }, [date]);
   
   const handleConfirm = () => {
     if (date && time) {
@@ -64,8 +95,8 @@ export default function BookingDialog({ isOpen, onOpenChange, station, onConfirm
             <div className="space-y-2">
                 <Label htmlFor="time-slot">Time Slot</Label>
                 <Select value={time} onValueChange={setTime}>
-                    <SelectTrigger id="time-slot">
-                        <SelectValue placeholder="Select a time" />
+                    <SelectTrigger id="time-slot" disabled={timeSlots.length === 0}>
+                        <SelectValue placeholder={timeSlots.length > 0 ? "Select a time" : "No available slots today"} />
                     </SelectTrigger>
                     <SelectContent>
                         {timeSlots.map(slot => (

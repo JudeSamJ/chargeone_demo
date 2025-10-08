@@ -19,7 +19,7 @@ export default function LiveNavigationCard({ data, onClearRoute }) {
                         <span className="sr-only">End Navigation</span>
                     </Button>
                 </div>
-                <CardDescription className="text-primary-foreground/80 flex items-center gap-2">
+                <CardDescription className="text-primary-foreground/80 flex items-center gap-2 pt-1">
                    <Flag className="h-4 w-4" /> to {data.endAddress}
                 </CardDescription>
             </CardHeader>
@@ -29,7 +29,7 @@ export default function LiveNavigationCard({ data, onClearRoute }) {
                     <div>
                         <p className="text-2xl font-bold">{data.duration}</p>
                         <p className="text-sm opacity-80">
-                           {data.estimatedArrivalTime ? `ETA ${data.estimatedArrivalTime}` : 'Calculating...'}
+                           Est. Duration
                         </p>
                     </div>
                 </div>
@@ -44,3 +44,5 @@ export default function LiveNavigationCard({ data, onClearRoute }) {
         </Card>
     );
 }
+
+    

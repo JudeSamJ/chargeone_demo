@@ -1,0 +1,250 @@
+{
+  "entities": {
+    "User": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "User",
+      "type": "object",
+      "description": "Represents a user of the ChargeOne application.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the user entity."
+        },
+        "email": {
+          "type": "string",
+          "description": "Email address of the user.",
+          "format": "email"
+        },
+        "firstName": {
+          "type": "string",
+          "description": "First name of the user."
+        },
+        "lastName": {
+          "type": "string",
+          "description": "Last name of the user."
+        },
+        "walletBalance": {
+          "type": "number",
+          "description": "The user's current wallet balance."
+        }
+      },
+      "required": [
+        "id",
+        "email",
+        "firstName",
+        "lastName",
+        "walletBalance"
+      ]
+    },
+    "ChargingStation": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "ChargingStation",
+      "type": "object",
+      "description": "Represents a charging station available for booking.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the charging station."
+        },
+        "providerId": {
+          "type": "string",
+          "description": "Identifier of the charging station within the provider's system."
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the charging station."
+        },
+        "location": {
+          "type": "string",
+          "description": "Geographic location of the charging station."
+        },
+        "availability": {
+          "type": "boolean",
+          "description": "Indicates if the charging station is currently available."
+        }
+      },
+      "required": [
+        "id",
+        "providerId",
+        "name",
+        "location",
+        "availability"
+      ]
+    },
+    "Booking": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Booking",
+      "type": "object",
+      "description": "Represents a booking made by a user for a charging station slot.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the booking."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to User. (Relationship: User 1:N Booking)"
+        },
+        "stationId": {
+          "type": "string",
+          "description": "Reference to ChargingStation. (Relationship: ChargingStation 1:N Booking)"
+        },
+        "startTime": {
+          "type": "string",
+          "description": "Start time of the booking.",
+          "format": "date-time"
+        },
+        "endTime": {
+          "type": "string",
+          "description": "End time of the booking.",
+          "format": "date-time"
+        },
+        "status": {
+          "type": "string",
+          "description": "Status of the booking (e.g., 'Confirmed', 'Active', 'Completed', 'Cancelled')."
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "stationId",
+        "startTime",
+        "endTime",
+        "status"
+      ]
+    },
+    "ChargingSession": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "ChargingSession",
+      "type": "object",
+      "description": "Represents a charging session for a user.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the charging session."
+        },
+        "bookingId": {
+          "type": "string",
+          "description": "Reference to Booking. (Relationship: Booking 1:1 ChargingSession)"
+        },
+        "startTime": {
+          "type": "string",
+          "description": "Actual start time of the charging session.",
+          "format": "date-time"
+        },
+        "endTime": {
+          "type": "string",
+          "description": "Actual end time of the charging session.",
+          "format": "date-time"
+        },
+        "energyConsumed": {
+          "type": "number",
+          "description": "Total energy consumed during the session (in kWh)."
+        },
+        "estimatedCost": {
+          "type": "number",
+          "description": "Estimated cost of the charging session."
+        },
+        "finalCost": {
+          "type": "number",
+          "description": "The actual final cost after charging."
+        }
+      },
+      "required": [
+        "id",
+        "bookingId",
+        "startTime",
+        "energyConsumed",
+        "estimatedCost",
+        "finalCost"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/users/{userId}",
+        "definition": {
+          "entityName": "User",
+          "schema": {
+            "$ref": "#/backend/entities/User"
+          },
+          "description": "Stores user data. Path-based ownership enforced by security rules. Root level collection facilitates `list` operations. The `userId` parameter matches the `request.auth.uid`",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier for the user."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/chargingStations/{stationId}",
+        "definition": {
+          "entityName": "ChargingStation",
+          "schema": {
+            "$ref": "#/backend/entities/ChargingStation"
+          },
+          "description": "Stores charging station data. This collection is separate to allow listing charging stations to any user.",
+          "params": [
+            {
+              "name": "stationId",
+              "description": "The unique identifier for the charging station."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/bookings/{bookingId}",
+        "definition": {
+          "entityName": "Booking",
+          "schema": {
+            "$ref": "#/backend/entities/Booking"
+          },
+          "description": "Stores booking data for a specific user. Path-based ownership ensures only the user can manage their bookings. This enforces access control to the bookings. The `userId` parameter matches the `request.auth.uid`",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier for the user."
+            },
+            {
+              "name": "bookingId",
+              "description": "The unique identifier for the booking."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/bookings/{bookingId}/sessions/{sessionId}",
+        "definition": {
+          "entityName": "ChargingSession",
+          "schema": {
+            "$ref": "#/backend/entities/ChargingSession"
+          },
+          "description": "Stores charging session data related to a specific booking. Path-based ownership ensures only the user can manage their charging sessions. The `userId` parameter matches the `request.auth.uid`",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier for the user."
+            },
+            {
+              "name": "bookingId",
+              "description": "The unique identifier for the booking."
+            },
+            {
+              "name": "sessionId",
+              "description": "The unique identifier for the charging session."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The Firestore structure is designed to ensure Authorization Independence, DBAC, and QAPs. User data is stored under `/users/{userId}` to establish clear ownership. Charging stations are stored under `/chargingStations/{stationId}`. Bookings are nested under `/users/{userId}/bookings/{bookingId}` to reflect the 1:N relationship and enforce ownership. Charging sessions are created as subcollections under bookings `/users/{userId}/bookings/{bookingId}/sessions/{sessionId}`. This maintains the association and allows for querying sessions related to specific bookings. This design avoids `get()` calls in security rules by leveraging path-based ownership for user-related data. QAPs are achieved through structural segregation; listing bookings is always scoped to a user, ensuring only authorized bookings are listed. This structure facilitates simple and robust security rules based on `request.auth.uid` and avoids reliance on custom claims."
+  }
+}

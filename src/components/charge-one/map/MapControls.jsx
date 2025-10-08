@@ -14,8 +14,8 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Label } from "../ui/label";
-import { Switch } from "../ui/switch";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 
 export default function MapControls({
     mapTypeId,

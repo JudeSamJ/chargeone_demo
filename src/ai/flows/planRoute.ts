@@ -28,18 +28,18 @@ const planRouteFlow = ai.defineFlow(
     const route = directionsResult.routes[0];
     const leg = route.legs[0];
     
+    // Simple range calculation: 1 kWh gives ~5 km range.
     const vehicleMaxRangeKm = vehicle.batteryCapacity * 5; 
     const safetyBufferKm = 50; // Leave a 50km buffer
     let currentChargeKm = vehicleMaxRangeKm * (vehicle.currentCharge / 100);
     
-    let requiredStations: Station[] = [];
+    const stationsOnRoute: Station[] = [];
     let totalChargingTimeSeconds = 0;
 
     if (!leg.steps || leg.steps.length === 0) {
         return {
             route: directionsResult,
             requiredChargingStations: [],
-            allNearbyStations: [],
             totalDistance: leg.distance?.value || 0,
             totalDuration: leg.duration?.value || 0,
         };
@@ -59,16 +59,15 @@ const planRouteFlow = ai.defineFlow(
                 radius: 50000, // 50km search radius
             });
 
-            // Add all found stations to our list of potential stops
-            nearbyStations.forEach(s => {
-                if (!requiredStations.some(rs => rs.id === s.id)) {
-                    requiredStations.push(s);
-                }
-            });
-
+            // Find the best available station nearby
             const bestStation = nearbyStations.find(s => s.status === 'available');
 
             if (bestStation) {
+                // Add this station to our list of required stops if it's not already there
+                if (!stationsOnRoute.some(s => s.id === bestStation.id)) {
+                    stationsOnRoute.push(bestStation);
+                }
+
                 // Estimate charging time.
                 // Assuming we charge from ~10% to 80% (a 70% charge)
                 const chargeNeededKwh = vehicle.batteryCapacity * 0.7;
@@ -76,7 +75,7 @@ const planRouteFlow = ai.defineFlow(
                 const chargingTimeHours = chargeNeededKwh / bestStation.power;
                 totalChargingTimeSeconds += chargingTimeHours * 3600;
 
-                // Simulate a full recharge after finding stations
+                // After charging, our range is reset to full.
                 currentChargeKm = vehicleMaxRangeKm;
             } else {
                 // Could not find an available station. For now, we'll just continue,
@@ -89,26 +88,17 @@ const planRouteFlow = ai.defineFlow(
         currentChargeKm -= stepDistanceKm;
     }
 
-    // Sort all found stations to prioritize the best ones.
-    requiredStations.sort((a, b) => {
-        if (a.status === 'available' && b.status !== 'available') return -1;
-        if (a.status !== 'available' && b.status === 'available') return 1;
-        if (a.power !== b.power) return b.power - a.power; // Higher power is better
-        return a.distance - b.distance; // Closer is better
-    });
-
-    // Filter down to the best 3 required stations.
-    const bestRequiredStations = requiredStations.slice(0, 3);
+    // The stations are already pre-sorted by the findStations flow, 
+    // but we can re-sort here if needed, or just take the ones we found.
+    const requiredChargingStations = stationsOnRoute;
 
     const totalDriveDurationSeconds = leg.duration?.value || 0;
     const totalDurationSeconds = totalDriveDurationSeconds + totalChargingTimeSeconds;
     const totalDistanceMeters = leg.distance?.value || 0;
 
-
     return {
       route: directionsResult,
-      requiredChargingStations: bestRequiredStations,
-      allNearbyStations: [], // We no longer need to return all nearby stations
+      requiredChargingStations: requiredChargingStations,
       totalDistance: totalDistanceMeters,
       totalDuration: totalDurationSeconds,
     };

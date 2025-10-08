@@ -1,10 +1,12 @@
 
 "use client";
 
-import { Bolt, LogOut, LocateFixed } from 'lucide-react';
-import { useAuth } from '@/hooks/useAuth';
-import { signOutWithGoogle } from '@/lib/firebase';
+import * as React from "react";
+import { Bolt, LogOut, LocateFixed, Sun, Moon } from 'lucide-react';
+import { useUser, useAuth } from '@/firebase';
+import { signOut } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
+import { useTheme } from "next-themes";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,23 +16,48 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { ThemeToggle } from './ThemeToggle';
-import { SidebarTrigger } from '../ui/sidebar';
-import { Button } from '../ui/button';
-import MapControls from './MapControls';
+import { Button } from '@/components/ui/button';
+import MapControls from '@/components/charge-one/map/MapControls';
 
+function ThemeToggle() {
+  const { setTheme } = useTheme()
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="outline" size="icon">
+          <Sun className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+          <Moon className="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+          <span className="sr-only">Toggle theme</span>
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuItem onClick={() => setTheme("light")}>
+          Light
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => setTheme("dark")}>
+          Dark
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => setTheme("system")}>
+          System
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+}
 
 export default function Header({ mapTypeId, onMapTypeIdChange, showTraffic, onShowTrafficChange, onRecenter }) {
-    const { user, loading } = useAuth();
+    const { user, isUserLoading } = useUser();
+    const auth = useAuth();
     const router = useRouter();
 
     const handleSignOut = async () => {
         try {
-        await signOutWithGoogle();
-        localStorage.removeItem('userVehicle');
-        router.push('/login');
+            await signOut(auth);
+            localStorage.removeItem('userVehicle');
+            router.push('/login');
         } catch (error) {
-        console.error("Sign out failed", error);
+            console.error("Sign out failed", error);
         }
     };
 
@@ -46,7 +73,6 @@ export default function Header({ mapTypeId, onMapTypeIdChange, showTraffic, onSh
             <div className="container mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="flex items-center justify-between h-16">
                 <div className="flex items-center gap-3">
-                    <SidebarTrigger />
                     <Bolt className="h-7 w-7 text-primary" />
                     <h1 className="text-2xl font-bold text-primary font-headline">ChargeOne</h1>
                 </div>
@@ -62,7 +88,7 @@ export default function Header({ mapTypeId, onMapTypeIdChange, showTraffic, onSh
                         onShowTrafficChange={onShowTrafficChange}
                     />
                     <ThemeToggle />
-                    {!loading && (
+                    {!isUserLoading && (
                     user ? (
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
@@ -101,3 +127,5 @@ export default function Header({ mapTypeId, onMapTypeIdChange, showTraffic, onSh
         </header>
     );
 }
+
+    

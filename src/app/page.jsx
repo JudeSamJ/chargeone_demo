@@ -3,47 +3,65 @@
 
 import { useState, Suspense, useEffect, useCallback, useRef } from 'react';
 import { defaultVehicle } from '@/lib/mock-data';
-import MapView from '@/components/charge-one/MapView';
-import { Toaster } from '@/components/ui/toaster';
+import MapView from '@/components/charge-one/map/MapView';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/hooks/useAuth';
+import { useUser } from '@/firebase';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Skeleton } from '@/components/ui/skeleton';
 import { planRoute } from '@/ai/flows/planRoute';
-import { findStations } from '@/ai/flows/findStations';
-import Controls from '@/components/charge-one/Controls';
-import { SidebarProvider, Sidebar, SidebarInset, SidebarContent, SidebarRail } from '@/components/ui/sidebar';
-import Header from '@/components/charge-one/Header';
-import { formatDuration, formatDistance } from './utils';
-import { add, differenceInMinutes } from 'date-fns';
+import Header from '@/components/charge-one/header/Header';
 import { createBooking, getUserBookings, cancelBooking } from '@/lib/firestore';
+import { differenceInMinutes } from 'date-fns';
+import { formatDistance, formatDuration } from './utils';
+import LiveNavigationCard from '@/components/charge-one/sidebar/LiveNavigationCard';
+import IconSidebar from '@/components/charge-one/sidebar/IconSidebar';
+import SheetSidebar from '@/components/charge-one/sidebar/SheetSidebar';
+import WalletCard from '@/components/charge-one/sidebar/WalletCard';
+import VehicleStatusCard from '@/components/charge-one/sidebar/VehicleStatusCard';
+import RoutePlanner from '@/components/charge-one/sidebar/RoutePlanner';
+import MyBookings from '@/components/charge-one/sidebar/MyBookings';
+import ChargingSession from '@/components/charge-one/sidebar/ChargingSession';
+import { Button } from '@/components/ui/button';
+import RechargeDialog from '@/components/charge-one/dialogs/RechargeDialog';
+import BookingDialog from '@/components/charge-one/dialogs/BookingDialog';
+import { useJsApiLoader } from '@react-google-maps/api';
+
+const GOOGLE_MAPS_LIBRARIES = ['places', 'geometry'];
 
 function HomePageContent() {
   const [stations, setStations] = useState([]);
-  const [requiredStations, setRequiredStations] = useState([]);
   const [selectedStation, setSelectedStation] = useState(null);
   const [walletBalance, setWalletBalance] = useState(0);
   const [isRechargeOpen, setIsRechargeOpen] = useState(false);
   const [isBookingOpen, setIsBookingOpen] = useState(false);
   const [userBookings, setUserBookings] = useState([]);
   const [userVehicle, setUserVehicle] = useState(null);
-  const [route, setRoute] = useState(null);
-  const [isPlanningRoute, setIsPlanningRoute] = useState(false);
   const [currentLocation, setCurrentLocation] = useState(null);
-  const [isJourneyStarted, setIsJourneyStarted] = useState(false);
-  const [liveJourneyData, setLiveJourneyData] = useState(null);
-  const journeyIntervalRef = useRef(null);
-  const [initialTripData, setInitialTripData] = useState(null);
   const [mapTypeId, setMapTypeId] = useState('roadmap');
-  const [showTraffic, setShowTraffic] = useState(false);
+  const [showTraffic, setShowTraffic] = useState(true);
   const [recenterMap, setRecenterMap] = useState(() => () => {});
   
+  const [directionsResponse, setDirectionsResponse] = useState(null);
+  const [route, setRoute] = useState(null);
+  const [loadingRoute, setLoadingRoute] = useState(false);
+
+  const [sidebarContent, setSidebarContent] = useState('home'); // 'home', 'bookings', 'vehicle'
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+
 
   const { toast } = useToast();
-  const { user, loading } = useAuth();
+  const { user, isUserLoading } = useUser();
   const router = useRouter();
   const searchParams = useSearchParams();
   const isGuest = searchParams.get('guest') === 'true';
+  
+  const originRef = useRef();
+  const destinationRef = useRef();
+  
+  const { isLoaded: isGoogleMapsLoaded } = useJsApiLoader({
+    googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY,
+    libraries: GOOGLE_MAPS_LIBRARIES,
+  });
 
   const fetchUserBookings = useCallback(async (uid) => {
     try {
@@ -56,9 +74,9 @@ function HomePageContent() {
   }, [toast]);
 
   useEffect(() => {
-    if (!loading && !user && !isGuest) {
+    if (!isUserLoading && !user && !isGuest) {
       router.push('/login');
-    } else if (!loading && (user || isGuest)) {
+    } else if (!isUserLoading && (user || isGuest)) {
       const storedVehicle = localStorage.getItem('userVehicle');
       if (storedVehicle) {
         setUserVehicle(JSON.parse(storedVehicle));
@@ -71,7 +89,7 @@ function HomePageContent() {
         router.push('/vehicle-details');
       }
     }
-  }, [user, loading, router, isGuest]);
+  }, [user, isUserLoading, router, isGuest]);
 
   useEffect(() => {
     if (user) {
@@ -80,44 +98,27 @@ function HomePageContent() {
   }, [user, fetchUserBookings]);
 
   useEffect(() => {
-    if (isJourneyStarted && initialTripData) {
-        const startTime = Date.now();
-        
-        const updateJourneyData = () => {
-            const elapsedTimeSeconds = (Date.now() - startTime) / 1000;
-            const remainingDurationSeconds = Math.max(0, initialTripData.duration - elapsedTimeSeconds);
-            const arrivalTime = new Date(Date.now() + remainingDurationSeconds * 1000);
-            
-            setLiveJourneyData(prev => prev ? ({
-                ...prev,
-                duration: formatDuration(remainingDurationSeconds),
-                estimatedArrivalTime: arrivalTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            }) : prev);
-        };
-        
-        updateJourneyData(); // Initial update
-        journeyIntervalRef.current = setInterval(updateJourneyData, 30000); // Update every 30 seconds
-
-    } else if (journeyIntervalRef.current) {
-        clearInterval(journeyIntervalRef.current);
-        journeyIntervalRef.current = null;
+    if (currentLocation && originRef.current && !originRef.current.value) {
+      originRef.current.value = `${currentLocation.lat}, ${currentLocation.lng}`;
     }
-
-    return () => {
-        if (journeyIntervalRef.current) {
-            clearInterval(journeyIntervalRef.current);
-        }
-    };
-}, [isJourneyStarted, initialTripData]);
+  }, [currentLocation]);
 
   
   const handleStationSelect = (station) => {
     setSelectedStation(station);
+    setSidebarContent('station');
+    setIsSidebarOpen(true);
   };
+
+  const handleClearStationSelection = () => {
+    setSelectedStation(null);
+    setSidebarContent('home');
+  }
 
   const handleEndSession = (cost) => {
     setWalletBalance((prev) => prev - cost);
     setSelectedStation(null);
+    setSidebarContent('home');
   };
 
   const handleRecharge = (amount) => {
@@ -129,117 +130,45 @@ function HomePageContent() {
     });
   }
   
-  const handleRouteUpdate = (result) => {
-    if (!result) {
-        setRoute(null);
-        setRequiredStations([]);
-        setInitialTripData(null);
-        setLiveJourneyData(null);
-        setIsJourneyStarted(false); // Make sure journey is ended
-        
-        // When clearing the route, fetch stations around the current location.
-        if (currentLocation) {
-            findStations({ latitude: currentLocation.lat, longitude: currentLocation.lng, radius: 10000 })
-                .then(setStations)
-                .catch(err => {
-                    console.error("Error finding stations after clearing route:", err);
-                    toast({ variant: 'destructive', title: 'Could not find nearby stations.'});
-                    setStations([]);
-                });
-        } else {
-            // If no location, clear stations list
-            setStations([]);
-        }
-        return;
+  async function calculateRoute() {
+    if (!originRef.current?.value || !destinationRef.current?.value || !userVehicle) {
+      toast({ variant: 'destructive', title: 'Missing Information', description: 'Please provide an origin, destination, and vehicle.' });
+      return;
     }
-
-    setRoute(result.route);
-    setRequiredStations(result.requiredChargingStations);
-
-    // Combine required stations and all other nearby stations, removing duplicates
-    const allStations = [...result.requiredChargingStations];
-    const uniqueStationIds = new Set();
-    const uniqueStations = allStations.filter(station => {
-        if (!uniqueStationIds.has(station.id)) {
-            uniqueStationIds.add(station.id);
-            return true;
-        }
-        return false;
-    });
-    setStations(uniqueStations);
     
-    setInitialTripData({ distance: result.totalDistance, duration: result.totalDuration });
-    
-    const leg = result.route.routes[0]?.legs[0];
-    if (leg) {
-        const arrivalTime = add(new Date(), {seconds: result.totalDuration});
-        setLiveJourneyData({
-            distance: formatDistance(result.totalDistance),
-            duration: formatDuration(result.totalDuration),
-            endAddress: leg.end_address || 'Destination',
-            estimatedArrivalTime: arrivalTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        });
-    } else {
-        setLiveJourneyData(null);
-    }
-  }
-
-  const handlePlanRoute = async (origin, destination) => {
-    if (!userVehicle) {
-        toast({ variant: 'destructive', title: 'Please select a vehicle first.' });
-        return;
-    }
-    setIsPlanningRoute(true);
-    handleRouteUpdate(null);
-    setSelectedStation(null);
-
+    setLoadingRoute(true);
     try {
-        const result = await planRoute({
-            origin,
-            destination,
-            vehicle: userVehicle
-        });
-        handleRouteUpdate(result);
-    } catch (error) {
-        console.error("Failed to plan route:", error);
-        toast({ variant: 'destructive', title: 'Failed to plan route.' });
-    } finally {
-        setIsPlanningRoute(false);
-    }
-  };
+      const result = await planRoute({
+        origin: originRef.current.value,
+        destination: destinationRef.current.value,
+        vehicle: userVehicle,
+      });
 
-  const handleClearRoute = () => {
-    setRoute(null);
-    setRequiredStations([]);
-    setInitialTripData(null);
-    setLiveJourneyData(null);
-    setIsJourneyStarted(false);
-    
-    if (currentLocation) {
-        findStations({ latitude: currentLocation.lat, longitude: currentLocation.lng, radius: 10000 })
-            .then(setStations)
-            .catch(err => {
-                console.error("Error finding stations after clearing route:", err);
-                toast({ variant: 'destructive', title: 'Could not find nearby stations.'});
-                setStations([]);
-            });
-    } else {
-        setStations([]);
-    }
-  };
-  
-  const handleStartJourney = () => {
-    if (route && liveJourneyData) {
-        setIsJourneyStarted(true);
-        // When journey starts, only show the required stations on the map.
-        setStations(requiredStations);
-        toast({
-            title: "Journey Started!",
-            description: "Live tracking is now active. The map will follow your location.",
-        });
+      setRoute(result);
+      setDirectionsResponse(result.route);
+      setStations(prevStations => {
+        const existingStationIds = new Set(prevStations.map(s => s.id));
+        const newStations = result.requiredChargingStations.filter(s => !existingStationIds.has(s.id));
+        return [...prevStations, ...newStations];
+      });
+      
+    } catch (error) {
+      console.error("Error planning route:", error);
+      toast({ variant: 'destructive', title: 'Route Planning Failed', description: 'Could not calculate a route. Please try again.' });
+      setRoute(null);
+      setDirectionsResponse(null);
+    } finally {
+      setLoadingRoute(false);
     }
   }
 
+  const clearRoute = useCallback(() => {
+    setRoute(null);
+    setDirectionsResponse(null);
+    if (destinationRef.current) destinationRef.current.value = '';
+    setSidebarContent('home');
+  }, []);
+  
   const handleBookingConfirm = async (date, time) => {
     if (!user || !selectedStation) {
       toast({ variant: "destructive", title: "Cannot create booking", description: "You must be signed in and select a station." });
@@ -248,7 +177,6 @@ function HomePageContent() {
 
     setIsBookingOpen(false);
 
-    // Combine date and time
     const [hours, minutes] = time.split(':');
     const bookingDateTime = new Date(date);
     bookingDateTime.setHours(parseInt(hours, 10));
@@ -257,7 +185,7 @@ function HomePageContent() {
 
     try {
       await createBooking(user.uid, selectedStation, bookingDateTime);
-      await fetchUserBookings(user.uid); // Refresh bookings
+      await fetchUserBookings(user.uid); 
       toast({
         title: "Slot Booked!",
         description: `Your slot at ${selectedStation?.name} is confirmed for ${bookingDateTime.toLocaleDateString()} at ${time}.`,
@@ -287,7 +215,7 @@ function HomePageContent() {
     }
   
     try {
-      await cancelBooking(booking.id);
+      await cancelBooking(user.uid, booking.id);
       await fetchUserBookings(user.uid); // Refresh bookings
       toast({
         title: "Booking Cancelled",
@@ -304,59 +232,118 @@ function HomePageContent() {
   };
 
   const handleStationsFound = useCallback((foundStations) => {
-    // Only update stations if a route is not active
-    if (!route) {
-        setStations(foundStations);
+    setStations(foundStations);
+  }, []);
+  
+  useEffect(() => {
+    if (route) {
+      setSidebarContent('navigation');
+      setIsSidebarOpen(true);
+    } else if (selectedStation) {
+      setSidebarContent('station');
+      setIsSidebarOpen(true);
+    } else {
+      // Don't change content if route or station is cleared, let user decide
     }
-  }, [route]);
+  }, [route, selectedStation]);
+  
+  const handleIconSidebarClick = (content) => {
+    if (content === sidebarContent && isSidebarOpen) {
+      setIsSidebarOpen(false);
+    } else {
+      setSidebarContent(content);
+      setIsSidebarOpen(true);
+    }
+  };
 
-  if (loading || (!user && !isGuest) || !userVehicle) {
+  if (isUserLoading || !userVehicle || !isGoogleMapsLoaded) {
     return (
-        <div className="relative h-screen w-screen">
-            <Skeleton className="h-full w-full" />
-            <div className="absolute top-4 left-4 z-10">
-                <Skeleton className="h-[600px] w-[400px]" />
-            </div>
+        <div className="relative h-screen w-screen flex items-center justify-center">
+            <Skeleton className="h-full w-full absolute" />
+            <p>Loading...</p>
         </div>
     );
   }
   
   const activeBookingForSelectedStation = selectedStation ? userBookings.find(b => b.stationId === selectedStation.id) : null;
   const bookedStationIds = userBookings.map(b => b.stationId);
+  const hasActiveRoute = !!route && !!directionsResponse;
+  
+  const navigationData = hasActiveRoute ? {
+    distance: formatDistance(route.totalDistance),
+    duration: formatDuration(route.totalDuration),
+    endAddress: directionsResponse.routes[0].legs[0].end_address,
+  } : null;
+  
+  const contentTitles = {
+    home: "Route Planner",
+    bookings: "My Bookings",
+    wallet: "My Wallet",
+    vehicle: "My Vehicle",
+    station: "Charging Station Details",
+    navigation: "Live Navigation"
+  }
+  const sidebarTitle = contentTitles[sidebarContent] || "ChargeOne";
+
+
+  const renderSidebarContent = () => {
+    switch (sidebarContent) {
+      case 'station':
+        return <ChargingSession
+                    station={selectedStation}
+                    onEndSession={handleEndSession}
+                    onClearSelection={handleClearStationSelection}
+                    vehicle={userVehicle}
+                    onBookSlot={() => setIsBookingOpen(true)}
+                    isGuest={isGuest}
+                    onCancelBooking={handleCancelBooking}
+                    activeBooking={activeBookingForSelectedStation}
+                    hasOtherBooking={userBookings.length > 0 && !activeBookingForSelectedStation}
+                />;
+      case 'navigation':
+         return navigationData ? <LiveNavigationCard data={navigationData} onClearRoute={clearRoute} /> : null;
+      case 'home':
+        return <RoutePlanner 
+                  onPlanRoute={calculateRoute} 
+                  originRef={originRef}
+                  destinationRef={destinationRef}
+                  loading={loadingRoute}
+                  onClearRoute={clearRoute}
+                  hasActiveRoute={hasActiveRoute}
+                  isLoaded={isGoogleMapsLoaded}
+                />;
+      case 'bookings':
+        return <MyBookings 
+                  bookings={userBookings} 
+                  onCancelBooking={handleCancelBooking} 
+                  onSelectStation={handleStationSelect}
+                />;
+      case 'wallet':
+        return <WalletCard balance={walletBalance} onRecharge={() => setIsRechargeOpen(true)} />;
+      case 'vehicle':
+        return (
+          <>
+            <VehicleStatusCard vehicle={userVehicle} />
+             <Button className="w-full" onClick={() => router.push('/vehicle-details')}>
+                Change Vehicle
+              </Button>
+          </>
+        );
+      default:
+        return null;
+    }
+  }
+
 
   return (
-      <SidebarProvider>
-        <Sidebar variant="floating" side="left">
-          <SidebarRail />
-          <SidebarContent className="p-4">
-              <Controls
-                  userVehicle={userVehicle}
-                  walletBalance={walletBalance}
-                  setIsRechargeOpen={setIsRechargeOpen}
-                  selectedStation={selectedStation}
-                  handleEndSession={handleEndSession}
-                  handleStationSelect={handleStationSelect}
-                  handlePlanRoute={handlePlanRoute}
-                  isPlanningRoute={isPlanningRoute}
-                  isRechargeOpen={isRechargeOpen}
-                  handleRecharge={handleRecharge}
-                  currentLocation={currentLocation}
-                  hasRoute={!!route}
-                  onClearRoute={handleClearRoute}
-                  isJourneyStarted={isJourneyStarted}
-                  onStartJourney={handleStartJourney}
-                  liveJourneyData={liveJourneyData}
-                  isBookingOpen={isBookingOpen}
-                  setIsBookingOpen={setIsBookingOpen}
-                  onBookingConfirm={handleBookingConfirm}
-                  isGuest={isGuest}
-                  userBookings={userBookings}
-                  onCancelBooking={handleCancelBooking}
-                  activeBookingForSelectedStation={activeBookingForSelectedStation}
-              />
-          </SidebarContent>
-        </Sidebar>
-        <SidebarInset>
+      <div className="flex h-screen w-screen bg-background">
+        <IconSidebar activeContent={sidebarContent} setActiveContent={handleIconSidebarClick} isGuest={isGuest} />
+        <SheetSidebar isOpen={isSidebarOpen} onOpenChange={setIsSidebarOpen} title={sidebarTitle}>
+          <div className="p-4 space-y-4 h-full overflow-y-auto">
+            {renderSidebarContent()}
+          </div>
+        </SheetSidebar>
+        <main className="flex-1 relative">
           <Header 
             mapTypeId={mapTypeId}
             onMapTypeIdChange={setMapTypeId}
@@ -364,24 +351,35 @@ function HomePageContent() {
             onShowTrafficChange={setShowTraffic}
             onRecenter={recenterMap}
           />
-            <MapView 
-                onStationsFound={handleStationsFound} 
-                stations={stations}
-                onStationClick={handleStationSelect}
-                route={route}
-                onLocationUpdate={setCurrentLocation}
-                currentLocation={currentLocation}
-                isJourneyStarted={isJourneyStarted}
-                onReRoute={handlePlanRoute}
-                mapTypeId={mapTypeId}
-                showTraffic={showTraffic}
-                bookedStationIds={bookedStationIds}
-                requiredStationIds={requiredStations.map(s => s.id)}
-                setRecenterCallback={setRecenterMap}
-            />
-        </SidebarInset>
-        <Toaster />
-      </SidebarProvider>
+          <MapView 
+              onStationsFound={handleStationsFound} 
+              stations={stations}
+              onStationClick={handleStationSelect}
+              directionsResponse={directionsResponse}
+              route={route}
+              onLocationUpdate={setCurrentLocation}
+              currentLocation={currentLocation}
+              mapTypeId={mapTypeId}
+              showTraffic={showTraffic}
+              bookedStationIds={bookedStationIds}
+              setRecenterCallback={setRecenterMap}
+              vehicle={userVehicle}
+              isLoaded={isGoogleMapsLoaded}
+          />
+        </main>
+        <RechargeDialog 
+          isOpen={isRechargeOpen}
+          onOpenChange={setIsRechargeOpen}
+          onRecharge={handleRecharge}
+          razorpayKeyId={process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID ?? ""} 
+        />
+        <BookingDialog
+            isOpen={isBookingOpen}
+            onOpenChange={setIsBookingOpen}
+            station={selectedStation}
+            onConfirm={handleBookingConfirm}
+        />
+      </div>
   );
 }
 
@@ -392,3 +390,5 @@ export default function Home() {
     </Suspense>
   )
 }
+
+    

@@ -6,6 +6,7 @@ export interface Vehicle {
   model: string;
   batteryCapacity: number; // in kWh
   currentCharge: number; // in %
+  supportedChargers: string[]; // e.g., ["CCS", "CHADEMO"]
 }
 
 export const StationSchema = z.object({
@@ -16,7 +17,7 @@ export const StationSchema = z.object({
   distance: z.number(), // in km
   power: z.number(), // in kW - Note: This is a placeholder as Places API doesn't provide it
   pricePerKwh: z.number(), // in currency - Note: This is a placeholder
-  connectors: z.array(z.enum(['CCS', 'CHAdeMO', 'Type 2'])), // Placeholder
+  connectors: z.array(z.string()), // Updated to be more flexible
   status: z.enum(['available', 'in-use', 'unavailable']), // 'available', 'in-use', or 'unavailable'
   hasSlotBooking: z.boolean().default(false),
   lat: z.number(),
@@ -61,11 +62,25 @@ export const PlanRouteOutputSchema = z.object({
         typeof data.routes[0].overview_polyline.points === 'string', 
         { message: "Route must have a valid encoded polyline." }
     ),
-    requiredChargingStations: z.array(z.custom<Station>()),
-    allNearbyStations: z.array(z.custom<Station>()),
+    requiredChargingStations: z.array(StationSchema),
     totalDistance: z.number(), // in meters
     totalDuration: z.number(), // in seconds, including charging time
 });
 
 export type PlanRouteInput = z.infer<typeof PlanRouteInputSchema>;
 export type PlanRouteOutput = z.infer<typeof PlanRouteOutputSchema>;
+
+export const RecognizeVehicleInputSchema = z.object({
+  photoDataUri: z
+    .string()
+    .describe(
+      "A photo of a vehicle, as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'."
+    ),
+});
+export type RecognizeVehicleInput = z.infer<typeof RecognizeVehicleInputSchema>;
+
+export const RecognizeVehicleOutputSchema = z.object({
+  make: z.string().describe('The make of the identified vehicle (e.g., "Tesla").'),
+  model: z.string().describe('The model of the identified vehicle (e.g., "Model Y").'),
+});
+export type RecognizeVehicleOutput = z.infer<typeof RecognizeVehicleOutputSchema>;

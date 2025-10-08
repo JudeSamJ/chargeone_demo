@@ -1,8 +1,9 @@
 
-const API_KEY = "AIzaSyBMltP754BsiINUjJ90C0HE5YE0As2cTcc";
 
-if (!API_KEY || API_KEY === "YOUR_GOOGLE_MAPS_API_KEY") {
-    console.warn("Using a placeholder Google Maps API Key. Please replace it in src/lib/google-maps.ts");
+const API_KEY = process.env.GOOGLE_MAPS_API_KEY;
+
+if (!API_KEY) {
+    console.warn("GOOGLE_MAPS_API_KEY environment variable not set.");
 }
 
 export async function findPlace(options: { query: string, location: { lat: number, lng: number }, radius: number }) {
@@ -12,7 +13,7 @@ export async function findPlace(options: { query: string, location: { lat: numbe
   const response = await fetch(url);
   const data = await response.json();
 
-  if (data.status !== 'OK') {
+  if (data.status !== 'OK' && data.status !== 'ZERO_RESULTS') {
     console.error('Google Places API Error:', data.error_message || data.status);
     return null;
   }

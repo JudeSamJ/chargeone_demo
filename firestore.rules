@@ -1,0 +1,120 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    /**
+     * @description Defines the isSignedIn function.
+     */
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    /**
+     * @description Checks if the request is made by the owner of the resource.
+     */
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+
+    /**
+     * @description Checks if the request is made by the owner of the existing resource.
+     * @details This function also ensures that the resource exists, preventing operations on non-existent documents.
+     */
+    function isExistingOwner(userId) {
+      return isOwner(userId) && existsAfter(resource);
+    }
+
+    /***************** User Collection Rules *****************/
+
+    /**
+     * @description Controls access to user documents.
+     * @path /users/{userId}
+     * @allow (create) - User with ID 'user123' creates their own document.
+     *   - Auth: { uid: 'user123' }
+     *   - Request Data: { id: 'user123', email: 'test@example.com', firstName: 'Test', lastName: 'User', walletBalance: 0 }
+     * @allow (get, update, delete) - User with ID 'user123' accesses their own document.
+     *   - Auth: { uid: 'user123' }
+     * @deny (create) - User with ID 'user456' attempts to create a document for user 'user123'.
+     *   - Auth: { uid: 'user456' }
+     *   - Request Data: { id: 'user123', email: 'test@example.com', firstName: 'Test', lastName: 'User', walletBalance: 0 }
+     * @deny (get, update, delete) - User with ID 'user456' attempts to access user 'user123's document.
+     *   - Auth: { uid: 'user456' }
+     * @principle Enforces document ownership for writes.
+     */
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow list: if false; // Listing users is not permitted
+
+      // Self-creation: User can create their own document
+      allow create: if request.auth.uid == userId;
+
+      // Owner-only updates and deletes
+      allow update: if isOwner(userId);
+      allow delete: if isOwner(userId);
+    }
+
+    /***************** Charging Stations Collection Rules *****************/
+
+    /**
+     * @description Controls access to charging station documents.
+     * @path /chargingStations/{stationId}
+     * @allow (get, list) - Any user can read charging station information.
+     *   - Auth: { uid: 'user123' }
+     * @deny (create, update, delete) - No user can create, update, or delete charging station information (prototype).
+     *   - Auth: { uid: 'user123' }
+     * @principle Allows public read access to charging station data.
+     */
+    match /chargingStations/{stationId} {
+      allow get, list: if true;
+      allow create, update, delete: if false; // TODO: Add authorization for creating/modifying charging stations
+    }
+
+    /***************** Bookings Collection Rules *****************/
+
+    /**
+     * @description Controls access to booking documents within a user's subcollection.
+     * @path /users/{userId}/bookings/{bookingId}
+     * @allow (create) - User with ID 'user123' creates a booking under their user document.
+     *   - Auth: { uid: 'user123' }
+     *   - Request Data: { userId: 'user123', stationId: 'station456', startTime: '...', endTime: '...', status: 'Confirmed' }
+     * @allow (get, update, delete) - User with ID 'user123' accesses their own booking.
+     *   - Auth: { uid: 'user123' }
+     * @deny (create) - User with ID 'user456' attempts to create a booking for user 'user123'.
+     *   - Auth: { uid: 'user456' }
+     *   - Request Data: { userId: 'user123', stationId: 'station456', startTime: '...', endTime: '...', status: 'Confirmed' }
+     * @deny (get, update, delete) - User with ID 'user456' attempts to access user 'user123's booking.
+     *   - Auth: { uid: 'user456' }
+     * @principle Restricts access to a user's own bookings.
+     */
+    match /users/{userId}/bookings/{bookingId} {
+      allow get, list: if isOwner(userId);
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId);
+      allow delete: if isOwner(userId);
+    }
+
+    /***************** Charging Sessions Collection Rules *****************/
+
+    /**
+     * @description Controls access to charging session documents within a booking's subcollection.
+     * @path /users/{userId}/bookings/{bookingId}/sessions/{sessionId}
+     * @allow (create) - User with ID 'user123' creates a session under their booking.
+     *   - Auth: { uid: 'user123' }
+     *   - Request Data: { bookingId: 'booking789', startTime: '...', energyConsumed: 10, estimatedCost: 5.0, finalCost: 6.0 }
+     * @allow (get, update, delete) - User with ID 'user123' accesses their own session.
+     *   - Auth: { uid: 'user123' }
+     * @deny (create) - User with ID 'user456' attempts to create a session for user 'user123'.
+     *   - Auth: { uid: 'user456' }
+     *   - Request Data: { bookingId: 'booking789', startTime: '...', energyConsumed: 10, estimatedCost: 5.0, finalCost: 6.0 }
+     * @deny (get, update, delete) - User with ID 'user456' attempts to access user 'user123's session.
+     *   - Auth: { uid: 'user456' }
+     * @principle Enforces strict user ownership for charging sessions.
+     */
+    match /users/{userId}/bookings/{bookingId}/sessions/{sessionId} {
+      allow get, list: if isOwner(userId);
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId);
+      allow delete: if isOwner(userId);
+    }
+  }
+}

@@ -1,6 +1,8 @@
 
 import './globals.css';
 import { ThemeProvider } from '@/components/ThemeProvider';
+import { FirebaseClientProvider } from '@/firebase/client-provider';
+import { Toaster } from "@/components/ui/toaster";
 
 export const metadata = {
   title: 'Firebase Studio App',
@@ -24,7 +26,10 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          {children}
+          <FirebaseClientProvider>
+            {children}
+            <Toaster />
+          </FirebaseClientProvider>
         </ThemeProvider>
       </body>
     </html>

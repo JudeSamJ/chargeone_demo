@@ -2,3 +2,4 @@
 // Flows will be imported for their side effects in this file.
 import './flows/findStations';
 import './flows/planRoute';
+import './flows/recognizeVehicle';

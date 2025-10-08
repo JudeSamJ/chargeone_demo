@@ -1,5 +1,8 @@
 
 export const formatDuration = (totalSeconds: number): string => {
+    if (totalSeconds < 60) {
+        return `${Math.round(totalSeconds)}s`;
+    }
     const hours = Math.floor(totalSeconds / 3600);
     const minutes = Math.floor((totalSeconds % 3600) / 60);
 

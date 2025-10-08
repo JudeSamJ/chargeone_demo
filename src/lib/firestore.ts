@@ -1,9 +1,17 @@
 
 "use server";
 
-import { db } from './firebase'; // Use client-side firebase
+import { initializeFirebase } from '@/firebase'; // Use client-side firebase
 import { collection, addDoc, Timestamp, query, where, getDocs, doc, deleteDoc, orderBy } from 'firebase/firestore';
 import type { Station, Booking } from './types';
+
+// This function needs to be called within a component or somewhere it can be initialized.
+// For server actions, this is tricky. A better approach is to initialize it once.
+// However, for this file, we'll initialize it on each call if needed.
+function getDb() {
+    const { firestore } = initializeFirebase();
+    return firestore;
+}
 
 export const createBooking = async (
     userId: string, 
@@ -11,9 +19,9 @@ export const createBooking = async (
     bookingTime: Date
 ): Promise<string> => {
     try {
-        const bookingsCollection = collection(db, 'bookings');
+        const db = getDb();
+        const bookingsCollection = collection(db, 'users', userId, 'bookings');
         const docRef = await addDoc(bookingsCollection, {
-            userId: userId,
             stationId: station.id,
             stationName: station.name,
             bookingTime: Timestamp.fromDate(bookingTime),
@@ -28,10 +36,10 @@ export const createBooking = async (
 
 export const getUserBookings = async (userId: string): Promise<Booking[]> => {
     try {
-        const bookingsCollection = collection(db, 'bookings');
+        const db = getDb();
+        const bookingsCollection = collection(db, 'users', userId, 'bookings');
         const q = query(
             bookingsCollection, 
-            where("userId", "==", userId),
             where("bookingTime", ">", Timestamp.now()), // Only get future bookings
             orderBy("bookingTime", "asc") // Order by the soonest
         );
@@ -42,7 +50,7 @@ export const getUserBookings = async (userId: string): Promise<Booking[]> => {
             const data = doc.data();
             bookings.push({
                 id: doc.id,
-                userId: data.userId,
+                userId: userId, // The collection is nested, so userId is known
                 stationId: data.stationId,
                 stationName: data.stationName,
                 bookingTime: data.bookingTime.toDate(),
@@ -56,9 +64,10 @@ export const getUserBookings = async (userId: string): Promise<Booking[]> => {
     }
 }
 
-export const cancelBooking = async (bookingId: string): Promise<void> => {
+export const cancelBooking = async (userId: string, bookingId: string): Promise<void> => {
     try {
-        const bookingDocRef = doc(db, 'bookings', bookingId);
+        const db = getDb();
+        const bookingDocRef = doc(db, 'users', userId, 'bookings', bookingId);
         await deleteDoc(bookingDocRef);
     } catch (e) {
         console.error("Error deleting document: ", e);

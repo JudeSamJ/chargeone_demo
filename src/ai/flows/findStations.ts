@@ -30,6 +30,8 @@ const findStationsFlow = ai.defineFlow(
     if (!places || places.length === 0) {
         return [];
     }
+    
+    const connectorTypes = ['CCS-2', 'CHAdeMO', 'Type-2', 'J-1772'];
 
     const stations: Station[] = places.map((p: any) => {
       // Use business_status for a more reliable operational check.
@@ -41,6 +43,12 @@ const findStationsFlow = ai.defineFlow(
         status = Math.random() > 0.3 ? 'available' : 'in-use';
       }
 
+      // Simulate a random number of connectors from 1 to 3
+      const numConnectors = Math.floor(Math.random() * 3) + 1;
+      const shuffledConnectors = [...connectorTypes].sort(() => 0.5 - Math.random());
+      const stationConnectors = shuffledConnectors.slice(0, numConnectors);
+
+
       return {
         id: p.place_id,
         name: p.name,
@@ -50,8 +58,7 @@ const findStationsFlow = ai.defineFlow(
         // Simulate power levels as this isn't in the standard Places API response.
         power: [50, 75, 150, 350][Math.floor(Math.random() * 4)],
         pricePerKwh: 18.50, // Placeholder price
-        // Assuming CCS is common, can be expanded.
-        connectors: ['CCS'],
+        connectors: stationConnectors,
         status: status,
         // Simulate slot booking capability.
         hasSlotBooking: Math.random() > 0.5,
@@ -69,7 +76,10 @@ const findStationsFlow = ai.defineFlow(
     stations.sort((a, b) => {
         if (a.status === 'available' && b.status !== 'available') return -1;
         if (a.status !== 'available' && b.status === 'available') return 1;
-        return b.power - a.power;
+        if (a.status === 'available' && b.status === 'available') {
+            return b.power - a.power; // Higher power is better
+        }
+        return 0; // Keep original order for non-available stations
     });
 
     return stations;
